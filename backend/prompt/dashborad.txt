@@ -1,0 +1,734 @@
+You are a senior Full Stack Engineer.
+
+Improve the existing frontend application for an internal platform called:
+
+Engineering Asset Registry
+
+Tech Stack:
+
+- Next.js 15 (App Router)
+- TypeScript
+- TailwindCSS
+- shadcn/ui
+- lucide-react
+- Existing fetch-based API layer
+
+Requirements:
+
+The application is an internal engineering asset management platform.
+
+The core concept is:
+
+Dataset = Asset
+Task = Processing Record
+
+A Task consumes one Dataset and produces another Dataset.
+
+Example:
+
+Dataset A
+    ↓
+Dedup Task
+    ↓
+Dataset B
+
+Users should be able to:
+
+- Browse datasets
+- Browse tasks
+- View dataset lineage
+- Search datasets
+- View storage usage
+- View ownership information
+
+Design Style:
+
+- Notion
+- Linear
+- GitHub Projects
+
+Requirements:
+
+- Light theme
+- Clean
+- Professional
+- High information density
+- No bright colors
+- No complicated charts
+- Responsive layout
+- Modern SaaS style
+
+=================================================
+Main Goal
+=================================================
+
+Make the navigation and dashboard experience more information-rich.
+
+The first screen should help users quickly understand:
+
+- How many datasets exist
+- How many tasks exist
+- How many active datasets exist
+- How many owners exist
+- Total storage usage
+- Recent task activity
+- Common entry points into datasets, tasks, lineage, owners, storage, and search
+
+Do not create a marketing landing page.
+
+The root page "/" should be a practical internal dashboard / navigation hub.
+
+=================================================
+Database Field Reference
+=================================================
+
+The frontend must align with the existing database fields.
+
+There are two core business tables:
+
+1. dataset
+2. dataset_task
+
+Do not assume separate owner, storage, lineage, or search tables.
+
+Dataset table fields:
+
+- id
+- name
+- description
+- source
+- dataset_type
+- location_path
+- data_size
+- size_unit
+- record_count
+- owner
+- status
+- created_at
+- updated_at
+
+Dataset source values:
+
+- export
+- task_produced
+
+Dataset type values:
+
+- table
+- image
+- text
+- feature
+- label
+- trainset
+- testset
+- result
+- other
+
+Dataset status values:
+
+- active
+- deleted
+
+DatasetTask table fields:
+
+- id
+- input_dataset_id
+- output_dataset_id
+- task_name
+- task_type
+- size_before
+- size_unit
+- size_after
+- record_before
+- record_after
+- duration_seconds
+- duration_unit
+- status
+- executor
+- code_version
+- config
+- start_time
+- end_time
+- created_at
+
+Task type values:
+
+- 质量过滤
+- 模型过滤
+- 去重
+- 清洗
+- 特征构建
+- 合并
+- 导出
+- 同步
+- 其他
+
+Task status values:
+
+- success
+- failed
+- running
+
+Task duration unit values:
+
+- seconds
+- minutes
+- hours
+- days
+
+=================================================
+Project Structure
+=================================================
+
+Work within the existing frontend project.
+
+Create or complete the following pages as needed:
+
+/
+
+Dashboard / Navigation Hub
+
+/datasets
+
+Dataset List
+
+/datasets/[id]
+
+Dataset Detail
+
+/tasks
+
+Task List
+
+/tasks/[id]
+
+Task Detail
+
+/lineage
+
+Lineage View
+
+/search
+
+Global Search
+
+/owners
+
+Owner List
+
+/storage
+
+Storage Overview
+
+=================================================
+Global Layout
+=================================================
+
+Layout:
+
+Sidebar + Header + Content
+
+Sidebar:
+
+Dashboard
+Datasets
+Tasks
+Lineage
+Search
+Owners
+Storage
+
+Sidebar should be information-rich where possible:
+
+- Show compact count badges for Datasets and Tasks
+- Show active state for the current route
+- Use clear icons from lucide-react
+- Keep the layout dense but readable
+
+Header:
+
+Page Title
+Global Search Input
+User Avatar Placeholder
+
+=================================================
+Dashboard Page
+=================================================
+
+Create a rich internal navigation dashboard.
+
+Create summary cards:
+
+- Total Datasets
+- Total Tasks
+- Active Datasets
+- Total Owners
+- Total Storage
+
+Create quick navigation cards for:
+
+- Browse Datasets
+- Browse Tasks
+- View Lineage
+- Search Assets
+- Owners
+- Storage
+
+Each quick navigation card should include:
+
+- Icon
+- Title
+- Short description
+- Relevant count or status when available
+
+Create Recent Activity section.
+
+Display latest tasks.
+
+Recent task activity should display fields from dataset_task:
+
+- task_name
+- task_type
+- status
+- executor
+- input_dataset_id
+- output_dataset_id
+- duration_seconds + duration_unit
+- created_at
+
+Use Cards.
+
+No complicated charts.
+
+Optional simple visual indicators are allowed:
+
+- Status badges
+- Small progress bars
+- Compact metric rows
+- Mini storage breakdown cards
+
+=================================================
+Dataset List Page
+=================================================
+
+Use Card Grid layout.
+
+Do NOT use traditional tables.
+
+Each Dataset Card shows fields from dataset:
+
+- name
+- description
+- dataset_type
+- owner
+- data_size + size_unit
+- record_count
+- status
+- location_path
+- source
+- updated_at
+
+Add:
+
+Search Input
+Filter Placeholder
+Create Dataset Button
+
+Filtering should support:
+
+- dataset_type
+- source
+- owner
+- status
+
+=================================================
+Dataset Detail Page
+=================================================
+
+Display fields from dataset:
+
+Basic Information
+
+- id
+- name
+- description
+- dataset_type
+- owner
+- status
+- source
+- location_path
+- data_size + size_unit
+- record_count
+- created_at
+- updated_at
+
+Lineage Section
+
+Show:
+
+Input Dataset
+↓
+Task
+↓
+Current Dataset
+
+Task History Section
+
+Display all related tasks where:
+
+- dataset.id = dataset_task.input_dataset_id
+- or dataset.id = dataset_task.output_dataset_id
+
+Use existing backend endpoint:
+
+GET /datasets/:id
+GET /datasets/:id/tasks
+
+=================================================
+Task List Page
+=================================================
+
+Display task cards.
+
+Each task contains fields from dataset_task:
+
+- task_name
+- task_type
+- input_dataset_id
+- output_dataset_id
+- status
+- executor
+- duration_seconds + duration_unit
+- size_before + size_unit
+- size_after + size_unit
+- record_before
+- record_after
+- created_at
+
+When possible, display dataset names by resolving input_dataset_id and output_dataset_id from GET /datasets.
+
+=================================================
+Task Detail Page
+=================================================
+
+Display fields from dataset_task:
+
+Basic Information
+
+- id
+- task_name
+- task_type
+- status
+- executor
+- created_at
+
+Execution Information
+
+- start_time
+- end_time
+- duration_seconds + duration_unit
+
+Input Dataset
+
+- input_dataset_id
+- input dataset name if resolved from GET /datasets
+
+Output Dataset
+
+- output_dataset_id
+- output dataset name if resolved from GET /datasets
+
+Data Changes
+
+- size_before + size_unit
+- size_after + size_unit
+
+- record_before
+- record_after
+
+Code Information
+
+- code_version
+
+Configuration
+
+- config JSON Viewer
+
+=================================================
+Lineage Page
+=================================================
+
+Create a simple lineage visualization.
+
+Example:
+
+raw_dataset
+    ↓
+dedup_task
+    ↓
+clean_dataset
+    ↓
+feature_task
+    ↓
+feature_dataset
+
+Use Cards and Arrows.
+
+Do NOT use graph libraries yet.
+
+Build lineage from existing fields:
+
+- dataset.id
+- dataset.name
+- dataset.dataset_type
+- dataset.status
+- dataset_task.input_dataset_id
+- dataset_task.output_dataset_id
+- dataset_task.task_name
+- dataset_task.task_type
+- dataset_task.status
+
+Use existing data from:
+
+GET /datasets
+GET /tasks
+
+=================================================
+Search Page
+=================================================
+
+Global search page.
+
+Search:
+
+- Dataset
+- Task
+- Owner
+
+Display grouped results.
+
+Since there is no dedicated backend search endpoint yet, implement client-side search using data from:
+
+GET /datasets
+GET /tasks
+
+Dataset search fields:
+
+- name
+- description
+- dataset_type
+- source
+- location_path
+- owner
+- status
+
+Task search fields:
+
+- task_name
+- task_type
+- status
+- executor
+- code_version
+
+Owner results should be derived from dataset.owner.
+
+=================================================
+Owners Page
+=================================================
+
+Display owner cards.
+
+Each owner card shows:
+
+- Name
+- Dataset Count
+- Active Dataset Count
+- Deleted Dataset Count
+- Task Count
+- Total Storage
+- Latest Dataset Updated Time
+
+Click owner to view related assets.
+
+Since there is no dedicated owner table or owner API yet, derive owners from:
+
+- dataset.owner
+- related tasks connected to that owner's datasets
+
+Task Count for an owner should include tasks where the owner's dataset appears as either:
+
+- dataset_task.input_dataset_id
+- dataset_task.output_dataset_id
+
+=================================================
+Storage Page
+=================================================
+
+Display storage summary.
+
+Show:
+
+- Dataset Count
+- Total Size
+- Active Dataset Size
+- Deleted Dataset Size
+- Record Count
+
+Group by storage type when it can be inferred from location_path:
+
+- OSS
+- NAS
+- HDFS
+- Other
+
+Use Cards.
+
+Do not require a backend /storage endpoint yet.
+
+Derive storage summaries from:
+
+GET /datasets
+
+Storage calculations should use:
+
+- data_size
+- size_unit
+- record_count
+- location_path
+- status
+
+=================================================
+Components
+=================================================
+
+Use or create reusable components:
+
+components/layout/sidebar.tsx
+components/layout/header.tsx
+
+components/dashboard/stat-card.tsx
+
+components/dataset/dataset-card.tsx
+components/dataset/dataset-detail.tsx
+
+components/task/task-card.tsx
+components/task/task-detail.tsx
+
+components/lineage/lineage-view.tsx
+
+components/common/search-box.tsx
+
+Add small reusable dashboard/navigation components if helpful.
+
+=================================================
+API Layer
+=================================================
+
+Use the existing API abstraction layer:
+
+lib/api.ts
+
+Use the existing fetch-based implementation.
+
+Do not replace it with axios.
+
+Use available backend endpoints:
+
+GET /dashboard
+
+GET /datasets
+GET /datasets/:id
+GET /datasets/:id/tasks
+
+GET /tasks
+GET /tasks/:id
+
+For unsupported views, derive data on the frontend:
+
+- Owners from dataset.owner
+- Storage from dataset.data_size, dataset.size_unit, dataset.record_count, dataset.location_path, and dataset.status
+- Search from dataset and dataset_task fields
+- Lineage from dataset.id, dataset_task.input_dataset_id, and dataset_task.output_dataset_id
+
+Do not create mock data files unless absolutely necessary for fallback empty states.
+
+=================================================
+Code Quality
+=================================================
+
+Requirements:
+
+- TypeScript types
+- Reusable components
+- Clean folder structure
+- Responsive UI
+- Consistent spacing
+- Use shadcn/ui Card Button Badge Input
+- Use lucide-react icons
+- Preserve existing project conventions
+- Do not rewrite unrelated parts of the app
+- Do not introduce unnecessary dependencies
+
+=================================================
+Output
+=================================================
+
+Generate or update:
+
+1. Dashboard / Navigation Hub
+2. Shared Layout
+3. Sidebar and Header improvements
+4. Components
+5. Pages
+6. API-derived data helpers where needed
+
+Make sure the project runs successfully with:
+
+npm install
+npm run dev
+
+No pseudocode.
+
+Generate production-quality code.
+
+=================================================
+Additional Requirements
+=================================================
+
+Dataset Storage Information
+
+Display:
+
+data_size + size_unit
+
+Task Execution Information
+
+Display:
+
+size_before + size_unit
+
+size_after + size_unit
+
+duration_seconds + duration_unit
+
+Create reusable utility functions:
+
+formatStorage()
+
+formatDuration()
+
+Task Detail page must highlight:
+
+Storage Change
+
+Record Count Change
+
+Execution Duration
+
+Use badges for:
+
+status
+task_type
+dataset_type
+
+Use consistent formatting across all pages.
