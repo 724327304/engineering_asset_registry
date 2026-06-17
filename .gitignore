@@ -1,0 +1,53 @@
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Production build
+frontend/build/
+
+# Python
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/.venv/
+backend/venv/
+*.pyc
+__pycache__/
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+# Vercel
+.vercel
+
+# Docker
+docker-compose.override.yaml
+
+# Misc
+*.pem
