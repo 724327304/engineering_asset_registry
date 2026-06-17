@@ -200,9 +200,9 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
                   >
                     <option value="质量过滤">质量过滤</option>
                     <option value="模型过滤">模型过滤</option>
-                    <option value="去重">去重</option>
+                    <option value="模糊去重">模糊去重</option>
+                    <option value="精确去重">精确去重</option>
                     <option value="清洗">清洗</option>
-                    <option value="特征构建">特征构建</option>
                     <option value="合并">合并</option>
                     <option value="导出">导出</option>
                     <option value="同步">同步</option>

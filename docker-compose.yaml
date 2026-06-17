@@ -5,9 +5,9 @@ services:
     image: postgres:14
     container_name: asset_pg
     environment:
-      POSTGRES_USER: asset_user
-      POSTGRES_PASSWORD: asset_pass
-      POSTGRES_DB: asset_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: engineering_asset_registry
     ports:
       - "5432:5432"
     volumes:
@@ -21,7 +21,7 @@ services:
     ports:
       - "8123:8123"
     environment:
-      DATABASE_URL: postgresql://asset_user:asset_pass@db:5432/engineering_asset_registry
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/engineering_asset_registry
 
 volumes:
   pgdata:

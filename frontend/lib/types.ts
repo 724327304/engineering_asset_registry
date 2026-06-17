@@ -109,6 +109,8 @@ export type Task = {
   recordAfter: number;
   recordBeforeLabel: string;
   recordAfterLabel: string;
+  sizeRetentionRateLabel: string;
+  recordRetentionRateLabel: string;
   durationSeconds: number;
   durationUnit: string;
   durationLabel: string;

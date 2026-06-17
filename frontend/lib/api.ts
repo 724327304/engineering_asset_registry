@@ -265,7 +265,11 @@ export async function getDashboard(): Promise<ApiResult<Dashboard>> {
 
   const datasets = datasetsResult.data ?? [];
   const datasetNames = new Map(datasets.map((dataset) => [dataset.id, dataset.name]));
-  const storageBytes = datasets.reduce((sum, dataset) => sum + Number(dataset.data_size ?? 0), 0);
+  const activeDatasets = datasets.filter((dataset) => dataset.status === "active");
+  const storageBytes = activeDatasets.reduce(
+    (sum, dataset) => sum + toBytes(Number(dataset.data_size ?? 0), dataset.size_unit ?? "B"),
+    0,
+  );
   const ownerCount = new Set(datasets.map((dataset) => dataset.owner).filter(Boolean)).size;
 
   return {
@@ -310,6 +314,10 @@ function toDataset(dataset: BackendDataset): Dataset {
 
 function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
   const durationSeconds = Number(task.duration_seconds ?? 0);
+  const sizeBefore = Number(task.size_before ?? 0);
+  const sizeAfter = Number(task.size_after ?? 0);
+  const recordBefore = Number(task.record_before ?? 0);
+  const recordAfter = Number(task.record_after ?? 0);
   const inputDatasetName = datasetNames?.get(task.input_dataset_id) ?? `数据集 #${task.input_dataset_id}`;
   const outputDatasetName = datasetNames?.get(task.output_dataset_id) ?? `数据集 #${task.output_dataset_id}`;
 
@@ -321,16 +329,18 @@ function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
     outputDatasetName,
     name: task.task_name,
     type: task.task_type,
-    sizeBefore: Number(task.size_before ?? 0),
+    sizeBefore,
     sizeUnit: task.size_unit ?? "B",
-    sizeAfter: Number(task.size_after ?? 0),
+    sizeAfter,
     sizeAfterUnit: task.size_after_unit ?? "B",
-    sizeBeforeLabel: formatSize(Number(task.size_before ?? 0), task.size_unit ?? "B"),
-    sizeAfterLabel: formatSize(Number(task.size_after ?? 0), task.size_after_unit ?? "B"),
-    recordBefore: Number(task.record_before ?? 0),
-    recordAfter: Number(task.record_after ?? 0),
-    recordBeforeLabel: formatNumber(Number(task.record_before ?? 0)),
-    recordAfterLabel: formatNumber(Number(task.record_after ?? 0)),
+    sizeBeforeLabel: formatSize(sizeBefore, task.size_unit ?? "B"),
+    sizeAfterLabel: formatSize(sizeAfter, task.size_after_unit ?? "B"),
+    recordBefore,
+    recordAfter,
+    recordBeforeLabel: formatNumber(recordBefore),
+    recordAfterLabel: formatNumber(recordAfter),
+    sizeRetentionRateLabel: formatRetentionRate(sizeBefore, sizeAfter),
+    recordRetentionRateLabel: formatRetentionRate(recordBefore, recordAfter),
     durationSeconds,
     durationUnit: task.duration_unit ?? "seconds",
     durationLabel: formatDuration(durationSeconds),
@@ -424,16 +434,18 @@ function formatDuration(seconds: number) {
   if (seconds < SECONDS_PER_DAY) {
     const hours = Math.floor(seconds / SECONDS_PER_HOUR);
     const mins = Math.round((seconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
-    return mins > 0 ? `${hours} 时 ${mins} 分` : `${hours} 时`;
+    return mins > 0 ? `${hours} 小时 ${mins} 分` : `${hours} 小时`;
   }
   const days = Math.floor(seconds / SECONDS_PER_DAY);
   const hours = Math.round((seconds % SECONDS_PER_DAY) / SECONDS_PER_HOUR);
-  return hours > 0 ? `${days} 天 ${hours} 时` : `${days} 天`;
+  return hours > 0 ? `${days} 天 ${hours} 小时` : `${days} 天`;
 }
 
 function formatSize(value: number, unit: string) {
   if (!value) return `0 ${unit}`;
-  const formatted = value >= 10 ? value.toFixed(0) : value.toFixed(1);
+  const formatted = new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value);
   return `${formatted} ${unit}`;
 }
 
@@ -451,9 +463,26 @@ function formatBytes(bytes: number) {
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }
 
+function toBytes(value: number, unit: string): number {
+  const multipliers: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
+  };
+  return value * (multipliers[unit] ?? 1);
+}
+
 function formatNumber(value: number) {
   return new Intl.NumberFormat("zh-CN", {
     notation: value >= 100000 ? "compact" : "standard",
     maximumFractionDigits: 1,
   }).format(value);
+}
+
+function formatRetentionRate(before: number, after: number) {
+  if (!before) return after ? "无法计算" : "0.00%";
+  const percent = (after / before) * 100;
+  return `${percent.toFixed(2)}%`;
 }

@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS dataset (
 
     location_path     VARCHAR(1024) NOT NULL,
 
-    data_size         BIGINT DEFAULT 0,
+    data_size         NUMERIC(12,2) DEFAULT 0,
     size_unit         VARCHAR(10) NOT NULL DEFAULT 'B',
     record_count      BIGINT DEFAULT 0,
 
@@ -93,7 +93,7 @@ COMMENT ON COLUMN dataset.location_path IS
 '存储路径';
 
 COMMENT ON COLUMN dataset.data_size IS
-'当前数据大小（字节）';
+'当前数据大小（配合 size_unit 使用，可保留小数）';
 
 COMMENT ON COLUMN dataset.size_unit IS
 '数据大小单位：B/KB/MB/GB/TB';
@@ -144,10 +144,10 @@ CREATE TABLE IF NOT EXISTS dataset_task (
 
     task_type             VARCHAR(50) NOT NULL,
 
-    size_before           BIGINT DEFAULT 0,
+    size_before           NUMERIC(12,2) DEFAULT 0,
     size_unit             VARCHAR(10) NOT NULL DEFAULT 'B',
 
-    size_after            BIGINT DEFAULT 0,
+    size_after            NUMERIC(12,2) DEFAULT 0,
 
     record_before         BIGINT DEFAULT 0,
 
@@ -185,9 +185,9 @@ CREATE TABLE IF NOT EXISTS dataset_task (
             task_type IN (
                 '质量过滤',
                 '模型过滤',
-                '去重',
+                '模糊去重',
+                '精确去重',
                 '清洗',
-                '特征构建',
                 '合并',
                 '导出',
                 '同步',
@@ -391,7 +391,7 @@ VALUES (
     1,
     2,
     '域名去重任务',
-    '去重',
+    '模糊去重',
     1073741824,
     536870912,
     1000000,

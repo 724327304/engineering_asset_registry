@@ -136,7 +136,9 @@ def main() -> None:
                     dataset_id,
                     task_name,
                     CASE
-                        WHEN task_type IN ('质量过滤', '模型过滤', '去重', '清洗', '特征构建', '合并', '导出', '同步', '其他')
+                        WHEN task_type = '去重'
+                            THEN '模糊去重'
+                        WHEN task_type IN ('质量过滤', '模型过滤', '模糊去重', '精确去重', '清洗', '合并', '导出', '同步', '其他')
                             THEN task_type
                         ELSE '其他'
                     END,

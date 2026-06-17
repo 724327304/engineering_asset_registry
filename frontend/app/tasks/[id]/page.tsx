@@ -118,15 +118,7 @@ export default function TaskDetailPage({ params }: TaskDetailPageProps) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <DetailSection
-          title="数据变化"
-          items={[
-            ["处理前大小", task.sizeBeforeLabel],
-            ["处理后大小", task.sizeAfterLabel],
-            ["处理前记录数", task.recordBeforeLabel],
-            ["处理后记录数", task.recordAfterLabel],
-          ]}
-        />
+        <DataChangeSection task={task} />
       </section>
 
       <section>
@@ -164,6 +156,33 @@ function DetailSection({ title, items }: { title: string; items: Array<[string, 
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+function DataChangeSection({ task }: { task: Task }) {
+  return (
+    <Card>
+      <CardHeader className="border-b border-zinc-200 pb-4">
+        <CardTitle className="text-sm">数据变化</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-x-8 gap-y-4 pt-5 md:grid-cols-2">
+        <InlineMetric label="处理前大小" value={task.sizeBeforeLabel} />
+        <InlineMetric label="处理前记录数" value={task.recordBeforeLabel} />
+        <InlineMetric label="处理后大小" value={task.sizeAfterLabel} />
+        <InlineMetric label="处理后记录数" value={task.recordAfterLabel} />
+        <InlineMetric label="数据留存率" value={task.sizeRetentionRateLabel} />
+        <InlineMetric label="文档留存率" value={task.recordRetentionRateLabel} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function InlineMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-baseline gap-2 text-sm">
+      <span className="shrink-0 font-medium text-zinc-500">{label}：</span>
+      <span className="truncate font-medium text-zinc-950">{value}</span>
+    </div>
   );
 }
 

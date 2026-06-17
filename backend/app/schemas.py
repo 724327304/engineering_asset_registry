@@ -11,7 +11,7 @@ class DatasetCreate(BaseModel):
     source: str = Field(default="task_produced", pattern="^(export|task_produced)$")
     dataset_type: str = Field(default="table", pattern="^(table|image|text|feature|label|trainset|testset|result|other)$")
     location_path: str = Field(..., max_length=1024)
-    data_size: int = 0
+    data_size: float = 0.0
     size_unit: Optional[str] = "B"
     record_count: int = 0
     owner: str = Field(..., max_length=128)
@@ -24,7 +24,7 @@ class DatasetUpdate(BaseModel):
     source: Optional[str] = Field(None, pattern="^(export|task_produced)$")
     dataset_type: Optional[str] = Field(None, pattern="^(table|image|text|feature|label|trainset|testset|result|other)$")
     location_path: Optional[str] = Field(None, max_length=1024)
-    data_size: Optional[int] = None
+    data_size: Optional[float] = None
     size_unit: Optional[str] = None
     record_count: Optional[int] = None
     owner: Optional[str] = Field(None, max_length=128)
@@ -38,7 +38,7 @@ class DatasetOut(BaseModel):
     source: str
     dataset_type: str
     location_path: str
-    data_size: int
+    data_size: float
     size_unit: Optional[str]
     record_count: int
     owner: str
@@ -55,10 +55,10 @@ class DatasetTaskCreate(BaseModel):
     input_dataset_id: int
     output_dataset_id: int
     task_name: str = Field(..., max_length=255)
-    task_type: str = Field(..., pattern="^(质量过滤|模型过滤|去重|清洗|特征构建|合并|导出|同步|其他)$")
-    size_before: int = 0
+    task_type: str = Field(..., pattern="^(质量过滤|模型过滤|模糊去重|精确去重|清洗|合并|导出|同步|其他)$")
+    size_before: float = 0.0
     size_unit: Optional[str] = "B"
-    size_after: int = 0
+    size_after: float = 0.0
     size_after_unit: Optional[str] = "B"
     record_before: int = 0
     record_after: int = 0
@@ -76,10 +76,10 @@ class DatasetTaskUpdate(BaseModel):
     input_dataset_id: Optional[int] = None
     output_dataset_id: Optional[int] = None
     task_name: Optional[str] = Field(None, max_length=255)
-    task_type: Optional[str] = Field(None, pattern="^(质量过滤|模型过滤|去重|清洗|特征构建|合并|导出|同步|其他)$")
-    size_before: Optional[int] = None
+    task_type: Optional[str] = Field(None, pattern="^(质量过滤|模型过滤|模糊去重|精确去重|清洗|合并|导出|同步|其他)$")
+    size_before: Optional[float] = None
     size_unit: Optional[str] = None
-    size_after: Optional[int] = None
+    size_after: Optional[float] = None
     size_after_unit: Optional[str] = None
     record_before: Optional[int] = None
     record_after: Optional[int] = None
@@ -99,9 +99,9 @@ class DatasetTaskOut(BaseModel):
     output_dataset_id: int
     task_name: str
     task_type: str
-    size_before: int
+    size_before: float
     size_unit: Optional[str]
-    size_after: int
+    size_after: float
     size_after_unit: Optional[str]
     record_before: int
     record_after: int

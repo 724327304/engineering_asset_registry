@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search,
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -19,6 +21,7 @@ import { getTasks } from "@/lib/api";
 import type { Task } from "@/lib/types";
 
 type TabKey = "success" | "running" | "failed";
+type SortDirection = "asc" | "desc";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "success", label: "成功" },
@@ -35,6 +38,34 @@ function taskStatusVariant(status: Task["status"]) {
   return "secondary";
 }
 
+function getDumpBatch(task: Task) {
+  const batch =
+    task.name.match(/^(20\d{2})-(\d{2})/) ??
+    task.inputDatasetName.match(/CC-MAIN-(20\d{2})-(\d{2})/) ??
+    task.outputDatasetName.match(/CC-MAIN-(20\d{2})-(\d{2})/);
+
+  if (!batch) return null;
+  return {
+    year: Number(batch[1]),
+    week: Number(batch[2]),
+  };
+}
+
+function compareByDumpBatch(a: Task, b: Task) {
+  const aBatch = getDumpBatch(a);
+  const bBatch = getDumpBatch(b);
+
+  if (aBatch && bBatch) {
+    if (aBatch.year !== bBatch.year) return aBatch.year - bBatch.year;
+    if (aBatch.week !== bBatch.week) return aBatch.week - bBatch.week;
+  }
+
+  if (aBatch && !bBatch) return -1;
+  if (!aBatch && bBatch) return 1;
+
+  return a.name.localeCompare(b.name, "zh-CN");
+}
+
 export default function TaskListPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +73,7 @@ export default function TaskListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [nameSortDirection, setNameSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     getTasks().then((result) => {
@@ -53,7 +85,7 @@ export default function TaskListPage() {
     });
   }, []);
 
-  // Filter → paginate
+  // Filter → sort → paginate
   const filtered = useMemo(() => {
     const list = tasks
       .filter((d) => d.status === activeTab)
@@ -67,9 +99,13 @@ export default function TaskListPage() {
           d.inputDatasetName.toLowerCase().includes(q) ||
           d.outputDatasetName.toLowerCase().includes(q)
         );
+      })
+      .sort((a, b) => {
+        const result = compareByDumpBatch(a, b);
+        return nameSortDirection === "asc" ? result : -result;
       });
     return list;
-  }, [tasks, activeTab, searchQuery]);
+  }, [tasks, activeTab, searchQuery, nameSortDirection]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -160,7 +196,25 @@ export default function TaskListPage() {
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   <th className="px-4 py-3 w-10">#</th>
-                  <th className="px-4 py-3">名称</th>
+                  <th className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNameSortDirection((current) =>
+                          current === "desc" ? "asc" : "desc",
+                        );
+                        setPage(1);
+                      }}
+                      className="inline-flex items-center gap-1.5 font-medium text-zinc-600 transition-colors hover:text-zinc-950"
+                    >
+                      名称
+                      {nameSortDirection === "desc" ? (
+                        <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 hidden md:table-cell">类型</th>
                   <th className="px-4 py-3 hidden lg:table-cell">输入数据集</th>
                   <th className="px-4 py-3 hidden lg:table-cell">输出数据集</th>
