@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, HardDrive } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Database,
+  HardDrive,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +26,10 @@ type StorageGroup = {
   deletedCount: number;
 };
 
+type SortDirection = "asc" | "desc";
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 function formatBytes(bytes: number) {
   if (!bytes) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -26,7 +39,21 @@ function formatBytes(bytes: number) {
     value /= 1024;
     unitIndex += 1;
   }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  const formatted = new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `${formatted} ${units[unitIndex]}`;
+}
+
+function toBytes(value: number, unit: string): number {
+  const multipliers: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
+  };
+  return value * (multipliers[unit] ?? 1);
 }
 
 function inferStorageType(locationPath: string): { key: string; label: string } {
@@ -41,9 +68,37 @@ function inferStorageType(locationPath: string): { key: string; label: string } 
   return { key: "other", label: "其他" };
 }
 
+function getDumpBatch(dataset: Dataset) {
+  const batch = dataset.name.match(/CC-MAIN-(20\d{2})-(\d{2})/);
+
+  if (!batch) return null;
+  return {
+    year: Number(batch[1]),
+    week: Number(batch[2]),
+  };
+}
+
+function compareByDumpBatch(a: Dataset, b: Dataset) {
+  const aBatch = getDumpBatch(a);
+  const bBatch = getDumpBatch(b);
+
+  if (aBatch && bBatch) {
+    if (aBatch.year !== bBatch.year) return aBatch.year - bBatch.year;
+    if (aBatch.week !== bBatch.week) return aBatch.week - bBatch.week;
+  }
+
+  if (aBatch && !bBatch) return -1;
+  if (!aBatch && bBatch) return 1;
+
+  return a.name.localeCompare(b.name, "zh-CN");
+}
+
 export default function StoragePage() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [nameSortDirection, setNameSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     getDatasets().then((result) => {
@@ -63,9 +118,10 @@ export default function StoragePage() {
 
     datasets.forEach((d) => {
       const { key, label } = inferStorageType(d.locationPath);
+      const bytes = toBytes(d.dataSize, d.sizeUnit);
       const existing = groups.get(key);
       if (existing) {
-        existing.bytes += d.dataSize;
+        existing.bytes += bytes;
         existing.datasetCount += 1;
         if (d.status === "active") existing.activeCount += 1;
         else existing.deletedCount += 1;
@@ -73,16 +129,16 @@ export default function StoragePage() {
         groups.set(key, {
           label,
           key,
-          bytes: d.dataSize,
+          bytes,
           datasetCount: 1,
           activeCount: d.status === "active" ? 1 : 0,
           deletedCount: d.status !== "active" ? 1 : 0,
         });
       }
 
-      totalBytes += d.dataSize;
-      if (d.status === "active") activeBytes += d.dataSize;
-      else deletedBytes += d.dataSize;
+      totalBytes += bytes;
+      if (d.status === "active") activeBytes += bytes;
+      else deletedBytes += bytes;
     });
 
     const sortedGroups = Array.from(groups.values()).sort((a, b) => b.bytes - a.bytes);
@@ -97,6 +153,21 @@ export default function StoragePage() {
       deletedLabel: formatBytes(deletedBytes),
     };
   }, [datasets]);
+
+  const sortedDatasets = useMemo(() => {
+    return [...datasets].sort((a, b) => {
+      const result = compareByDumpBatch(a, b);
+      return nameSortDirection === "asc" ? result : -result;
+    });
+  }, [datasets, nameSortDirection]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedDatasets.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedDatasets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedDatasets.slice(start, start + pageSize);
+  }, [sortedDatasets, currentPage, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -233,12 +304,31 @@ export default function StoragePage() {
           {datasets.length > 0 && (
             <Card>
               <CardHeader className="border-b border-zinc-200 pb-4">
-                <CardTitle className="text-sm">
-                  全部数据集 ({datasets.length})
-                </CardTitle>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="text-sm">
+                    全部数据集 ({datasets.length})
+                  </CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameSortDirection((current) =>
+                        current === "desc" ? "asc" : "desc",
+                      );
+                      setPage(1);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-950"
+                  >
+                    名称
+                    {nameSortDirection === "desc" ? (
+                      <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="divide-y divide-zinc-100 p-0">
-                {datasets.map((d) => (
+                {pagedDatasets.map((d) => (
                   <div
                     key={d.id}
                     className="flex items-center gap-4 px-5 py-3.5"
@@ -256,6 +346,66 @@ export default function StoragePage() {
                     </Badge>
                   </div>
                 ))}
+                <div className="flex items-center justify-between gap-4 px-5 py-4 text-sm">
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <span>每页</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span>
+                      条，共 {sortedDatasets.length} 条
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={currentPage === 1}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label="第一页"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label="上一页"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="px-3 text-zinc-600">
+                      第 {currentPage} / {totalPages} 页
+                    </span>
+                    <button
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label="下一页"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label="最后一页"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
