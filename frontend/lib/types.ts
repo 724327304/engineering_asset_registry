@@ -39,6 +39,7 @@ export type Dataset = {
   dataSize: number;
   sizeUnit: string;
   sizeLabel: string;
+  sizeDisplayLabel: string;
   recordCount: number;
   recordCountLabel: string;
   owner: string;
@@ -105,6 +106,8 @@ export type Task = {
   sizeAfterUnit: string;
   sizeBeforeLabel: string;
   sizeAfterLabel: string;
+  sizeBeforeDisplayLabel: string;
+  sizeAfterDisplayLabel: string;
   recordBefore: number;
   recordAfter: number;
   recordBeforeLabel: string;

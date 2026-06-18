@@ -55,7 +55,7 @@ class DatasetTaskCreate(BaseModel):
     input_dataset_id: int
     output_dataset_id: int
     task_name: str = Field(..., max_length=255)
-    task_type: str = Field(..., pattern="^(质量过滤|模型过滤|模糊去重|精确去重|清洗|合并|导出|同步|其他)$")
+    task_type: str = Field(..., pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|数据抽取|清洗|合并|导出|同步|其他)$")
     size_before: float = 0.0
     size_unit: Optional[str] = "B"
     size_after: float = 0.0
@@ -76,7 +76,7 @@ class DatasetTaskUpdate(BaseModel):
     input_dataset_id: Optional[int] = None
     output_dataset_id: Optional[int] = None
     task_name: Optional[str] = Field(None, max_length=255)
-    task_type: Optional[str] = Field(None, pattern="^(质量过滤|模型过滤|模糊去重|精确去重|清洗|合并|导出|同步|其他)$")
+    task_type: Optional[str] = Field(None, pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|数据抽取|清洗|合并|导出|同步|其他)$")
     size_before: Optional[float] = None
     size_unit: Optional[str] = None
     size_after: Optional[float] = None
@@ -125,3 +125,27 @@ class DashboardOut(BaseModel):
     task_count: int
     recent_tasks: list[DatasetTaskOut]
     active_datasets: int
+
+
+# ── OSS Storage ────────────────────────────────────────────
+
+class OssBucketUsageOut(BaseModel):
+    name: str
+    limit_tb: float
+    limit_bytes: int
+    used_bytes: int
+    remaining_bytes: int
+    usage_percent: float
+    object_count: int
+    multipart_uploads: int
+    error: Optional[str] = None
+
+
+class OssStorageOut(BaseModel):
+    generated_at: str
+    endpoint: str
+    configured: bool
+    total_limit_bytes: int
+    total_used_bytes: int
+    total_remaining_bytes: int
+    buckets: list[OssBucketUsageOut]

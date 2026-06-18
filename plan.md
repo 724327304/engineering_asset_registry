@@ -1,434 +1,343 @@
-# 工程资产管理平台（Engineering Asset Registry）V0.1 开发计划（轻量版）
+# Engineering Asset Registry 项目计划
 
----
+## 一、项目定位
 
-# 一、项目背景
+Engineering Asset Registry 是一个内部工程数据资产登记平台，用于把数据集、处理任务、血缘关系、负责人和存储占用统一管理起来。
 
-在当前工程实践中，数据在多个处理阶段（导出、清洗、转换）中不断流转，但存在以下问题：
+当前系统围绕两个核心概念构建：
 
-* 数据来源记录不清晰
-* 数据处理过程缺乏统一记录
-* 数据变化（大小/数量）不可追踪
-* 数据责任人与处理任务脱节
-* 排查问题时无法快速定位“数据是怎么来的”
+- Dataset = Asset，表示一个工程数据资产。
+- Task = Processing Record，表示一次数据处理记录。
 
-为解决上述问题，计划建设一个**轻量级工程资产管理平台 V0.1**，聚焦“数据本体 + 任务过程”两类核心信息。
+一个 Task 消费一个输入 Dataset，并产出一个输出 Dataset。
 
----
-
-# 二、项目目标
-
-## 2.1 总体目标
-
-在 7 天内完成一个可运行的内部系统，实现：
-
-> **数据资产登记 + 数据生成任务记录 + 基础查询展示**
-
----
-
-## 2.2 核心能力目标
-
-系统需具备：
-
-### ✔ 数据可登记
-
-记录数据的基础属性与当前状态
-
-### ✔ 任务可追踪
-
-记录数据如何生成或被处理
-
-### ✔ 关联可查询
-
-数据 ↔ 任务之间可追溯
-
-### ✔ 信息可展示
-
-支持列表 + 详情页查看
-
----
-
-# 三、系统设计（极简模型）
-
-## 3.1 核心数据模型
-
-系统仅包含两张核心表：
-
----
-
-## （1）dataset 表（数据资产表）
-
-用于描述“当前这个数据是什么”
-
-### 字段设计
-
-| 字段           | 说明                      |
-| ------------ | ----------------------- |
-| id           | 数据ID                    |
-| name         | 数据名称                    |
-| description  | 数据说明                    |
-| source       | 来源（导出、任务生产） |
-| location_path     | 存储位置（OSS/NAS路径）         |
-| data_size   | 数据大小                    |
-| record_count | 数据行数                    |
-| owner        | 负责人                     |
-| status       | 留存 / 已删除     |
-| created_at   | 创建时间                    |
-| updated_at   | 更新时间                    |
-
----
-
-### 特点
-
-* 不做版本管理
-* 不做血缘图
-* 只记录“当前状态”
-
----
-
-## （2）dataset_task 表（任务记录表）
-
-用于描述“数据是怎么来的”
-
-### 字段设计
-
-| 字段               | 说明                          |
-| ---------------- | --------------------------- |
-| id               | task id                     |
-| dataset_id       | 关联 dataset                  |
-| task_name        | 任务名称                        |
-| task_type        | 质量过滤 / 模型过滤 / 去重     |
-| input_source     | 输入来源                        |
-| output_location  | 输出路径                        |
-| size_before      | 输入数据大小                      |
-| size_after       | 输出数据大小                      |
-| record_before    | 输入行数                        |
-| record_after     | 输出行数                        |
-| duration_seconds | 耗时                          |
-| status           | success / failed            |
-| executor         | 执行人                         |
-| code_version     | Git commit                  |
-| config           | 配置（JSON）                    |
-| start_time       | 开始时间                        |
-| end_time         | 结束时间                        |
-
----
-
-### 特点
-
-* 记录数据变化过程
-* 支持简单审计
-* 不做 DAG 血缘建模
-
----
-
-# 四、系统架构设计
-
-## 4.1 技术架构
+典型链路：
 
 ```text
-前端（Next.js）
-        ↓
-后端（FastAPI）
-        ↓
-PostgreSQL
+CC-MAIN-2026-17-预处理
+    -> 2026-17-精确去重
+CC-MAIN-2026-17-精确去重
+    -> 2026-17-质量过滤
+CC-MAIN-2026-17-质量过滤
 ```
 
----
+## 二、当前技术栈
 
-## 4.2 模块划分
-
-### 前端模块
-
-* Dashboard（统计页）
-* Dataset列表页
-* Dataset详情页
-* Task列表页
-* Task详情页
-* 新建Dataset
-* 新建Task
-
----
-
-### 后端模块
-
-* Dataset API
-* Task API
-* Dashboard API
-
----
-
-### 数据层
-
-* PostgreSQL（唯一数据源）
-
----
-
-# 五、API设计
-
-## 5.1 Dataset API
-
-* GET /datasets
-* GET /datasets/{id}
-* POST /datasets
-* PUT /datasets/{id}
-
----
-
-## 5.2 Task API
-
-* GET /tasks
-* GET /tasks/{id}
-* POST /tasks
-* GET /datasets/{id}/tasks
-
----
-
-## 5.3 Dashboard API
-
-* GET /dashboard
-
-返回：
-
-* dataset count
-* task count
-* recent tasks
-* active datasets
-
----
-
-# 六、页面设计（V0.1极简版）
-
----
-
-## 6.1 Dashboard 首页
-
-展示：
-
-* 数据集总数
-* 任务总数
-* 最近任务列表
-
----
-
-## 6.2 Dataset 列表页
-
-字段：
-
-* name
-* size
-* owner
-* status
-
-操作：
-
-* 查看详情
-* 新建数据
-
----
-
-## 6.3 Dataset 详情页（核心页面）
-
-展示：
-
-### 基本信息
-
-* name
-* location
-* size
-* record_count
-
----
-
-### 任务历史（关键）
-
-展示：
-
-```
-Task A → 生成当前数据
-Task B → 清洗
-Task C → 转换
+```text
+Frontend: Next.js + React + TypeScript + Tailwind CSS + lucide-react
+Backend : FastAPI + SQLAlchemy + Pydantic
+Database: PostgreSQL
 ```
 
----
+本地默认服务：
+
+- 前端页面: `http://127.0.0.1:8123`
+- 后端 API: `http://127.0.0.1:8000`
+- API 文档: `http://127.0.0.1:8000/docs`
+- PostgreSQL: `127.0.0.1:5432/engineering_asset_registry`
+
+## 三、当前项目结构
+
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── api.py
+│   │   ├── crud.py
+│   │   ├── db.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   └── schemas.py
+│   └── prompt/
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   └── lib/
+├── scripts/
+├── logs/
+├── schema.sql
+├── docker-compose.yaml
+├── start.sh
+└── README.md
+```
+
+## 四、当前数据模型
+
+### 4.1 dataset
+
+数据资产表，用于描述当前登记的数据集。
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 数据集 ID |
+| `name` | 数据集名称 |
+| `description` | 数据说明 |
+| `source` | 来源，`export` 或 `task_produced` |
+| `dataset_type` | 类型，如 `text`、`table`、`feature` |
+| `location_path` | 存储路径 |
+| `data_size` | 数据大小，支持小数 |
+| `size_unit` | 大小单位，如 `B`、`GB`、`TB` |
+| `record_count` | 记录数 |
+| `owner` | 负责人 |
+| `status` | `active` 或 `deleted` |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
+
+### 4.2 dataset_task
+
+数据处理任务表，用于描述数据如何从输入资产生成输出资产。
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 任务 ID |
+| `input_dataset_id` | 输入数据集 ID |
+| `output_dataset_id` | 输出数据集 ID |
+| `task_name` | 任务名称 |
+| `task_type` | 任务类型 |
+| `size_before` | 处理前大小，支持小数 |
+| `size_unit` | 处理前大小单位 |
+| `size_after` | 处理后大小，支持小数 |
+| `size_after_unit` | 处理后大小单位 |
+| `record_before` | 处理前记录数 |
+| `record_after` | 处理后记录数 |
+| `duration_seconds` | 耗时，单位秒 |
+| `duration_unit` | 耗时单位，当前主要使用 `seconds` |
+| `status` | `success`、`failed` 或 `running` |
+| `executor` | 执行人 |
+| `code_version` | 代码版本 |
+| `config` | 运行配置 JSON |
+| `start_time` | 开始时间 |
+| `end_time` | 结束时间 |
+| `created_at` | 创建时间 |
+
+当前任务类型：
+
+```text
+质量过滤
+模型过滤
+模糊去重
+精确去重
+数据解析
+数据抽取
+清洗
+合并
+导出
+同步
+其他
+```
+
+## 五、当前已实现能力
+
+### 5.1 后端能力
+
+- Dataset 创建、查询、详情、更新。
+- Task 创建、查询、详情、更新。
+- 根据 Dataset 查询相关任务。
+- Dashboard 汇总接口。
+- PostgreSQL 表结构支持 GB/TB 等单位和小数大小。
+- 任务大小字段 `size_before` / `size_after` 支持小数。
 
-## 6.4 Task 列表页
+### 5.2 前端页面
 
-字段：
+- `/`: 仪表盘，展示数据集数、任务数、负责人、活跃存储量和最近活动。
+- `/datasets`: 数据集列表，支持状态切换、搜索、分页和按 dump 批次排序。
+- `/datasets/[id]`: 数据集详情，展示基础信息、血缘和相关任务。
+- `/tasks`: 任务列表，支持状态切换、搜索、分页和按 dump 批次排序。
+- `/tasks/[id]`: 任务详情，展示数据流向、执行信息、数据留存率和配置。
+- `/lineage`: 简单血缘视图。
+- `/search`: 全局搜索。
+- `/owners`: 负责人聚合视图，正确按 `data_size + size_unit` 汇总存储量。
+- `/storage`: 存储概览，按存储类型聚合，正确按单位换算容量，并支持数据集分页和排序。
 
-* task_name
-* dataset
-* status
-* duration
-* executor
+### 5.3 当前数据资产链路
 
----
+已登记 CC dump 的主要阶段：
 
-## 6.5 Task 详情页
+- 预处理数据集，状态为 `deleted`。
+- 精确去重数据集，状态为 `active`。
+- 质量过滤数据集，状态为 `active`。
 
-展示：
+已创建的任务链路：
 
-* 输入数据
-* 输出数据
-* size变化
-* 行数变化
-* code_version
-* config
-* 时间线
+- `预处理 -> 精确去重`
+- `精确去重 -> 质量过滤`
 
----
+## 六、当前 API
 
-# 七、一周开发计划
+```text
+GET  /dashboard
 
----
+GET  /datasets
+POST /datasets
+GET  /datasets/{dataset_id}
+PUT  /datasets/{dataset_id}
+GET  /datasets/{dataset_id}/tasks
 
-## Day 1：项目初始化
+GET  /tasks
+POST /tasks
+GET  /tasks/{task_id}
+PUT  /tasks/{task_id}
+```
 
-* Next.js 初始化
-* FastAPI 初始化
-* PostgreSQL Docker部署
-* 项目结构搭建
+目前 Owners、Storage、Search、Lineage 主要由前端基于 `/datasets` 和 `/tasks` 派生展示。
 
----
+## 七、当前设计原则
 
-## Day 2：数据库设计 + 建表
+### 7.1 两表核心模型
 
-* dataset表
-* dataset_task表
-* SQLAlchemy模型
-* Alembic迁移
+系统继续保持轻量，核心事实仍由 `dataset` 和 `dataset_task` 两张表承载。
 
----
+### 7.2 任务驱动血缘
 
-## Day 3：后端API
+血缘关系不单独建复杂 DAG 表，优先通过：
 
-* Dataset CRUD
-* Task CRUD
-* 关联查询API
-* Swagger调通
+```text
+dataset_task.input_dataset_id
+dataset_task.output_dataset_id
+```
 
----
+推导数据链路。
 
-## Day 4：前端基础页面
+### 7.3 存储量必须按单位换算
 
-* Dashboard
-* Dataset列表
-* Task列表
+涉及存储聚合时，必须使用：
 
----
+```text
+data_size + size_unit
+```
 
-## Day 5：详情页
+换算为 bytes 后再汇总。
 
-* Dataset详情（任务链展示）
-* Task详情页
+### 7.4 活跃口径和历史口径分开
 
----
+- 仪表盘存储量只统计 `active` 数据集。
+- 存储概览可同时展示总量、活跃量、已删除量。
+- 已删除数据集可以保留历史大小和记录数，但存储地址可能为空。
 
-## Day 6：联调
+### 7.5 CC dump 排序
 
-* 前后端联通
-* 数据流测试
-* 基础bug修复
+CC dump 页面默认按 `CC-MAIN-YYYY-WW` 批次倒序排列，并支持点击名称切换正序/倒序。
 
----
+## 八、下一阶段 TODO
 
-## Day 7：优化与打包
+### 8.1 数据集抽样展示功能
 
-* UI优化
-* 查询优化
-* Docker Compose整合
-* 内部可访问部署
+目标：在数据集详情页中增加数据抽样展示能力，帮助用户快速判断数据内容质量。
 
----
+建议范围：
 
-# 八、MVP成功标准
+- 在 `/datasets/[id]` 增加“数据抽样”区域。
+- 支持展示若干条样本记录。
+- 后端新增抽样接口，例如：
 
-系统上线后必须满足：
+```text
+GET /datasets/{dataset_id}/samples
+```
 
-## ✔ 能登记数据
+待明确事项：
 
-* dataset可创建
+- 样本数据来源：数据库保存、OSS 文件读取、还是外部采样任务产物。
+- 样本格式：纯文本、JSONL、Parquet、CSV 等。
+- 是否需要对敏感字段做脱敏。
 
-## ✔ 能记录任务
+### 8.2 OSS 数据已存储和总存储查询
 
-* dataset_task可写入
+目标：能够查询 OSS 文件夹下对应的文件和子文件夹，并展示真实已存储大小、对象数量和目录结构。
 
-## ✔ 能查数据来源
+建议范围：
 
-* dataset → task可追溯
+- 后端增加 OSS 查询能力。
+- 输入 `location_path`，查询对应 OSS prefix。
+- 返回：
+  - 当前目录对象数量
+  - 子文件夹数量
+  - 已存储总大小
+  - 文件/子文件夹列表
+  - 最近更新时间或对象元信息
+- 前端在数据集详情页和存储概览页展示 OSS 实际存储信息。
 
-## ✔ 能看变化
+建议接口：
 
-* size_before vs size_after
+```text
+GET /storage/oss/summary?path=oss://bucket/prefix/
+GET /storage/oss/list?path=oss://bucket/prefix/
+```
 
-## ✔ 能跑通完整闭环
+待明确事项：
 
-数据生成 → 任务记录 → 数据展示
+- OSS 访问凭证如何配置。
+- 是否只读访问。
+- 是否需要缓存 OSS 查询结果，避免页面频繁触发对象存储扫描。
+- 大目录是否分页查询。
 
----
+### 8.3 数据集列表页面增加筛选和导出功能
 
-# 九、扩展预留（不在V0.1实现）
+目标：增强 `/datasets` 页面在大量数据集下的检索和运营能力。
 
-系统预留接口用于未来扩展：
+建议筛选项：
 
-* MCP查询接口
-* Git自动同步
-* GPU监控接入
-* Airflow任务接入
-* 数据版本系统（后续升级）
+- 状态：`active` / `deleted`
+- 来源：`export` / `task_produced`
+- 类型：`text` / `table` / `feature` 等
+- 负责人
+- 存储类型：OSS / NAS / HDFS / Other
+- 批次范围：按 `CC-MAIN-YYYY-WW`
+- 大小范围
+- 记录数范围
 
----
+建议导出能力：
 
-# 十、核心设计原则总结
+- 导出当前筛选结果。
+- 格式优先支持 CSV。
+- 字段包含：
+  - 数据集名称
+  - 来源
+  - 类型
+  - 状态
+  - 大小
+  - 记录数
+  - 负责人
+  - 存储位置
+  - 更新时间
 
-## ✔ 极简模型优先
+前端实现建议：
 
-只保留：
+- 第一阶段可在前端基于已加载数据完成筛选和 CSV 导出。
+- 第二阶段当数据量增大后，将筛选、排序、分页下沉到后端。
 
-* dataset
-* dataset_task
+后端接口演进建议：
 
----
+```text
+GET /datasets?status=&source=&dataset_type=&owner=&q=&limit=&offset=&sort=
+GET /datasets/export?status=&source=&dataset_type=&owner=&q=
+```
 
-## ✔ 以任务驱动数据变化
+## 九、后续演进方向
 
-所有数据变化必须有 task 来源
+- 后端分页、筛选、排序能力。
+- 数据集抽样存储与展示。
+- OSS 对象扫描与缓存。
+- 任务执行日志和失败原因记录。
+- 更完整的数据血缘图。
+- 数据版本化。
+- 数据质量指标。
+- Airflow / 调度系统任务采集。
+- MCP / AI 查询接口。
 
----
+## 十、验收标准
 
-## ✔ 不做复杂血缘
+当前版本应持续满足：
 
-避免系统复杂化
+- 能登记数据集。
+- 能记录任务。
+- 能通过任务追踪数据来源和去向。
+- 能查看数据大小、记录数和留存率。
+- 能按负责人、存储类型、状态进行基础浏览。
+- 能正确按单位换算存储量。
+- 能通过 CC dump 批次排序快速定位数据。
 
----
+下一阶段 TODO 完成后，应额外满足：
 
-## ✔ 先可用，再扩展
-
-V0.1目标：
-
-> “能用、能查、能解释数据来源”
-
----
-
-# 十一、长期演进路径（V0.2+）
-
-未来可逐步扩展：
-
-* dataset_version（版本化）
-* dataset_lineage（血缘图）
-* dataset_artifact（多存储）
-* 自动任务采集
-* MCP AI查询层
-* 数据影响分析
-
----
-
-# 十二、总结
-
-本版本的核心价值是：
-
-> 用最小复杂度，实现数据 + 任务的可追溯闭环
-
-这是整个工程治理体系的第一步，也是最关键的一步。
-
-后续所有复杂能力（血缘、AI、自动化）都可以基于此逐步扩展。
+- 能在数据集详情中查看样本。
+- 能查询 OSS prefix 下真实对象和目录信息。
+- 能在数据集列表进行多条件筛选并导出结果。

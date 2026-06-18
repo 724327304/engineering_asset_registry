@@ -6,6 +6,7 @@ import { Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateTask, getDatasets } from "@/lib/api";
+import { fromDurationSeconds, toDurationSeconds } from "@/lib/duration";
 import type { Task, Dataset } from "@/lib/types";
 
 type TaskEditDialogProps = {
@@ -30,7 +31,7 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
     size_after_unit: task.sizeAfterUnit || "B",
     record_before: String(task.recordBefore),
     record_after: String(task.recordAfter),
-    duration_seconds: String(task.durationSeconds),
+    duration_seconds: String(fromDurationSeconds(task.durationSeconds, task.durationUnit || "seconds")),
     duration_unit: task.durationUnit || "seconds",
     status: task.status,
     executor: task.executor,
@@ -72,8 +73,13 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
     if (form.size_after_unit !== (task.sizeAfterUnit || "B")) changed.size_after_unit = form.size_after_unit;
     if (Number(form.record_before) !== task.recordBefore) changed.record_before = Number(form.record_before) || 0;
     if (Number(form.record_after) !== task.recordAfter) changed.record_after = Number(form.record_after) || 0;
-    if (Number(form.duration_seconds) !== task.durationSeconds) changed.duration_seconds = Number(form.duration_seconds) || 0;
-    if (form.duration_unit !== (task.durationUnit || "seconds")) changed.duration_unit = form.duration_unit;
+    const durationSeconds = form.duration_seconds
+      ? toDurationSeconds(Number(form.duration_seconds), form.duration_unit)
+      : 0;
+    if (durationSeconds !== task.durationSeconds || task.durationUnit !== "seconds") {
+      changed.duration_seconds = durationSeconds;
+      changed.duration_unit = "seconds";
+    }
     if (form.status !== task.status) changed.status = form.status;
     if (form.executor !== task.executor) changed.executor = form.executor;
     if (form.code_version !== task.codeVersion) changed.code_version = form.code_version;
@@ -202,6 +208,8 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
                     <option value="模型过滤">模型过滤</option>
                     <option value="模糊去重">模糊去重</option>
                     <option value="精确去重">精确去重</option>
+                    <option value="数据解析">数据解析</option>
+                    <option value="数据抽取">数据抽取</option>
                     <option value="清洗">清洗</option>
                     <option value="合并">合并</option>
                     <option value="导出">导出</option>
@@ -299,7 +307,7 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
                    >
                      <option value="seconds">秒</option>
                      <option value="minutes">分</option>
-                     <option value="hours">时</option>
+                     <option value="hours">小时</option>
                      <option value="days">天</option>
                    </select>
                  </div>

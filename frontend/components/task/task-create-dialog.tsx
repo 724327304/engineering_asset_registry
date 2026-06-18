@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTask, getDatasets } from "@/lib/api";
+import { toDurationSeconds } from "@/lib/duration";
 import type { Task, Dataset } from "@/lib/types";
 
 type TaskCreateDialogProps = {
@@ -86,8 +87,10 @@ export function TaskCreateDialog({ onCreated }: TaskCreateDialogProps = {}) {
       size_after: form.size_after ? Number(form.size_after) : 0,
       record_before: form.record_before ? Number(form.record_before) : 0,
       record_after: form.record_after ? Number(form.record_after) : 0,
-      duration_seconds: form.duration_seconds ? Number(form.duration_seconds) : 0,
-      duration_unit: form.duration_unit,
+      duration_seconds: form.duration_seconds
+        ? toDurationSeconds(Number(form.duration_seconds), form.duration_unit)
+        : 0,
+      duration_unit: "seconds",
       status: form.status,
       executor: form.executor || undefined,
       code_version: form.code_version || undefined,
@@ -238,6 +241,8 @@ export function TaskCreateDialog({ onCreated }: TaskCreateDialogProps = {}) {
                     <option value="模型过滤">模型过滤</option>
                     <option value="模糊去重">模糊去重</option>
                     <option value="精确去重">精确去重</option>
+                    <option value="数据解析">数据解析</option>
+                    <option value="数据抽取">数据抽取</option>
                     <option value="清洗">清洗</option>
                     <option value="合并">合并</option>
                     <option value="导出">导出</option>
@@ -335,7 +340,7 @@ export function TaskCreateDialog({ onCreated }: TaskCreateDialogProps = {}) {
                    >
                      <option value="seconds">秒</option>
                      <option value="minutes">分</option>
-                     <option value="hours">时</option>
+                     <option value="hours">小时</option>
                      <option value="days">天</option>
                    </select>
                  </div>

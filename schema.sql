@@ -187,6 +187,8 @@ CREATE TABLE IF NOT EXISTS dataset_task (
                 '模型过滤',
                 '模糊去重',
                 '精确去重',
+                '数据解析',
+                '数据抽取',
                 '清洗',
                 '合并',
                 '导出',

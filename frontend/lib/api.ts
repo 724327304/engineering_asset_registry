@@ -7,6 +7,7 @@ import type {
   TaskCreateInput,
   TaskUpdateInput,
 } from "@/lib/types";
+import { toDurationSeconds } from "@/lib/duration";
 
 function getApiBaseUrl() {
   if (typeof window === "undefined") {
@@ -64,6 +65,59 @@ type BackendDashboard = {
   task_count: number;
   recent_tasks: BackendTask[];
   active_datasets: number;
+};
+
+type BackendOssBucketUsage = {
+  name: string;
+  limit_tb: number;
+  limit_bytes: number;
+  used_bytes: number;
+  remaining_bytes: number;
+  usage_percent: number;
+  object_count: number;
+  multipart_uploads: number;
+  error: string | null;
+};
+
+type BackendOssStorage = {
+  generated_at: string;
+  endpoint: string;
+  configured: boolean;
+  total_limit_bytes: number;
+  total_used_bytes: number;
+  total_remaining_bytes: number;
+  buckets: BackendOssBucketUsage[];
+};
+
+export type OssBucketUsage = {
+  name: string;
+  limitTb: number;
+  limitBytes: number;
+  limitLabel: string;
+  usedBytes: number;
+  usedLabel: string;
+  remainingBytes: number;
+  remainingLabel: string;
+  usagePercent: number;
+  objectCount: number;
+  objectCountLabel: string;
+  multipartUploads: number;
+  multipartUploadsLabel: string;
+  error: string | null;
+};
+
+export type OssStorage = {
+  generatedAt: string;
+  generatedAtLabel: string;
+  endpoint: string;
+  configured: boolean;
+  totalLimitBytes: number;
+  totalLimitLabel: string;
+  totalUsedBytes: number;
+  totalUsedLabel: string;
+  totalRemainingBytes: number;
+  totalRemainingLabel: string;
+  buckets: OssBucketUsage[];
 };
 
 export type ApiResult<T> =
@@ -288,6 +342,21 @@ export async function getDashboard(): Promise<ApiResult<Dashboard>> {
   };
 }
 
+export async function getOssStorage(): Promise<ApiResult<OssStorage>> {
+  const result = await safeRequest<BackendOssStorage>("/storage/oss", {
+    cache: "no-store",
+  });
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "OSS 存储读取失败" };
+  }
+
+  return {
+    data: toOssStorage(result.data),
+    error: null,
+  };
+}
+
 function toDataset(dataset: BackendDataset): Dataset {
   return {
     id: dataset.id,
@@ -301,6 +370,7 @@ function toDataset(dataset: BackendDataset): Dataset {
     dataSize: Number(dataset.data_size ?? 0),
     sizeUnit: dataset.size_unit ?? "B",
     sizeLabel: formatSize(Number(dataset.data_size ?? 0), dataset.size_unit ?? "B"),
+    sizeDisplayLabel: formatAdaptiveSize(Number(dataset.data_size ?? 0), dataset.size_unit ?? "B"),
     recordCount: Number(dataset.record_count ?? 0),
     recordCountLabel: formatNumber(Number(dataset.record_count ?? 0)),
     owner: dataset.owner,
@@ -313,7 +383,10 @@ function toDataset(dataset: BackendDataset): Dataset {
 }
 
 function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
-  const durationSeconds = Number(task.duration_seconds ?? 0);
+  const durationSeconds = toDurationSeconds(
+    Number(task.duration_seconds ?? 0),
+    task.duration_unit ?? "seconds",
+  );
   const sizeBefore = Number(task.size_before ?? 0);
   const sizeAfter = Number(task.size_after ?? 0);
   const recordBefore = Number(task.record_before ?? 0);
@@ -335,11 +408,16 @@ function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
     sizeAfterUnit: task.size_after_unit ?? "B",
     sizeBeforeLabel: formatSize(sizeBefore, task.size_unit ?? "B"),
     sizeAfterLabel: formatSize(sizeAfter, task.size_after_unit ?? "B"),
+    sizeBeforeDisplayLabel: formatAdaptiveSize(sizeBefore, task.size_unit ?? "B"),
+    sizeAfterDisplayLabel: formatAdaptiveSize(sizeAfter, task.size_after_unit ?? "B"),
     recordBefore,
     recordAfter,
     recordBeforeLabel: formatNumber(recordBefore),
     recordAfterLabel: formatNumber(recordAfter),
-    sizeRetentionRateLabel: formatRetentionRate(sizeBefore, sizeAfter),
+    sizeRetentionRateLabel: formatRetentionRate(
+      toBytes(sizeBefore, task.size_unit ?? "B"),
+      toBytes(sizeAfter, task.size_after_unit ?? "B"),
+    ),
     recordRetentionRateLabel: formatRetentionRate(recordBefore, recordAfter),
     durationSeconds,
     durationUnit: task.duration_unit ?? "seconds",
@@ -356,6 +434,37 @@ function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
     startTimeLabel: formatDateTime(task.start_time),
     endTimeLabel: formatDateTime(task.end_time),
     createdAtLabel: formatDateTime(task.created_at),
+  };
+}
+
+function toOssStorage(storage: BackendOssStorage): OssStorage {
+  return {
+    generatedAt: storage.generated_at,
+    generatedAtLabel: formatDateTime(storage.generated_at),
+    endpoint: storage.endpoint,
+    configured: storage.configured,
+    totalLimitBytes: storage.total_limit_bytes,
+    totalLimitLabel: formatBytesForDisplay(storage.total_limit_bytes),
+    totalUsedBytes: storage.total_used_bytes,
+    totalUsedLabel: formatBytesForDisplay(storage.total_used_bytes),
+    totalRemainingBytes: storage.total_remaining_bytes,
+    totalRemainingLabel: formatBytesForDisplay(storage.total_remaining_bytes),
+    buckets: storage.buckets.map((bucket) => ({
+      name: bucket.name,
+      limitTb: bucket.limit_tb,
+      limitBytes: bucket.limit_bytes,
+      limitLabel: formatBytesForDisplay(bucket.limit_bytes),
+      usedBytes: bucket.used_bytes,
+      usedLabel: formatBytesForDisplay(bucket.used_bytes),
+      remainingBytes: bucket.remaining_bytes,
+      remainingLabel: formatBytesForDisplay(bucket.remaining_bytes),
+      usagePercent: bucket.usage_percent,
+      objectCount: bucket.object_count,
+      objectCountLabel: formatNumber(bucket.object_count),
+      multipartUploads: bucket.multipart_uploads,
+      multipartUploadsLabel: formatNumber(bucket.multipart_uploads),
+      error: bucket.error,
+    })),
   };
 }
 
@@ -449,6 +558,10 @@ function formatSize(value: number, unit: string) {
   return `${formatted} ${unit}`;
 }
 
+function formatAdaptiveSize(value: number, unit: string) {
+  return formatBytesForDisplay(toBytes(value, unit));
+}
+
 function formatBytes(bytes: number) {
   if (!bytes) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -461,6 +574,23 @@ function formatBytes(bytes: number) {
   }
 
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function formatBytesForDisplay(bytes: number) {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  const formatted = new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `${formatted} ${units[unitIndex]}`;
 }
 
 function toBytes(value: number, unit: string): number {

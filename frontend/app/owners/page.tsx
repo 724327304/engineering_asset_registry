@@ -26,7 +26,21 @@ function formatBytes(bytes: number) {
     value /= 1024;
     unitIndex += 1;
   }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  const formatted = new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value);
+  return `${formatted} ${units[unitIndex]}`;
+}
+
+function toBytes(value: number, unit: string): number {
+  const multipliers: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
+  };
+  return value * (multipliers[unit] ?? 1);
 }
 
 export default function OwnersPage() {
@@ -60,28 +74,38 @@ export default function OwnersPage() {
 
     datasets.forEach((d) => {
       const o = d.owner || "未知";
+      const bytes = toBytes(d.dataSize, d.sizeUnit);
       const existing = ownerMap.get(o);
       if (existing) {
         existing.datasetCount += 1;
         if (d.status === "active") existing.activeDatasets += 1;
         else existing.deletedDatasets += 1;
-        existing.totalStorageBytes += d.dataSize;
+        existing.totalStorageBytes += bytes;
         existing.datasetTypes.add(d.datasetTypeLabel);
       } else {
         ownerMap.set(o, {
           datasetCount: 1,
           activeDatasets: d.status === "active" ? 1 : 0,
           deletedDatasets: d.status !== "active" ? 1 : 0,
-          totalStorageBytes: d.dataSize,
+          totalStorageBytes: bytes,
           datasetTypes: new Set([d.datasetTypeLabel]),
         });
       }
     });
 
-    const taskCountByOwner = new Map<string, number>();
+    const taskIdsByOwner = new Map<string, Set<number>>();
+    const addTaskForOwner = (owner: string, taskId: number) => {
+      const existing = taskIdsByOwner.get(owner);
+      if (existing) {
+        existing.add(taskId);
+        return;
+      }
+      taskIdsByOwner.set(owner, new Set([taskId]));
+    };
+
     tasks.forEach((t) => {
       if (!t.executor) return;
-      taskCountByOwner.set(t.executor, (taskCountByOwner.get(t.executor) ?? 0) + 1);
+      addTaskForOwner(t.executor, t.id);
     });
 
     // Also count tasks for owners via dataset ownership
@@ -95,7 +119,7 @@ export default function OwnersPage() {
       });
       const o = d.owner;
       if (o) {
-        taskCountByOwner.set(o, (taskCountByOwner.get(o) ?? 0) + taskIds.size);
+        taskIds.forEach((taskId) => addTaskForOwner(o, taskId));
       }
     });
 
@@ -104,7 +128,7 @@ export default function OwnersPage() {
       result.push({
         owner: key,
         ...value,
-        taskCount: taskCountByOwner.get(key) ?? 0,
+        taskCount: taskIdsByOwner.get(key)?.size ?? 0,
         datasetTypes: Array.from(value.datasetTypes),
       });
     });

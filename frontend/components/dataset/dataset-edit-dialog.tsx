@@ -6,6 +6,7 @@ import { Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateDataset } from "@/lib/api";
+import { DATA_SIZE_LIMIT_HINT, getDataSizeError } from "@/lib/dataset-validation";
 import type { Dataset } from "@/lib/types";
 
 type DatasetEditDialogProps = {
@@ -24,7 +25,7 @@ export function DatasetEditDialog({ dataset }: DatasetEditDialogProps) {
     source: dataset.source,
     dataset_type: dataset.datasetType,
     location_path: dataset.locationPath,
-    data_size: dataset.dataSize,
+    data_size: String(dataset.dataSize),
     size_unit: dataset.sizeUnit ?? "B",
     record_count: dataset.recordCount,
     owner: dataset.owner,
@@ -41,6 +42,13 @@ export function DatasetEditDialog({ dataset }: DatasetEditDialogProps) {
     setSubmitting(true);
     setError(null);
 
+    const dataSizeError = getDataSizeError(form.data_size);
+    if (dataSizeError) {
+      setError(dataSizeError);
+      setSubmitting(false);
+      return;
+    }
+
     // 仅发送与初始值不同的字段（部分更新）
     const changed: Record<string, string | number> = {};
     if (form.name !== dataset.name) changed.name = form.name;
@@ -48,7 +56,8 @@ export function DatasetEditDialog({ dataset }: DatasetEditDialogProps) {
     if (form.source !== dataset.source) changed.source = form.source;
     if (form.dataset_type !== dataset.datasetType) changed.dataset_type = form.dataset_type;
     if (form.location_path !== dataset.locationPath) changed.location_path = form.location_path;
-    if (form.data_size !== dataset.dataSize) changed.data_size = form.data_size;
+    const dataSize = Number(form.data_size || 0);
+    if (dataSize !== dataset.dataSize) changed.data_size = dataSize;
     if (form.size_unit !== (dataset.sizeUnit ?? "B")) changed.size_unit = form.size_unit;
     if (form.record_count !== dataset.recordCount) changed.record_count = form.record_count;
     if (form.owner !== dataset.owner) changed.owner = form.owner;
@@ -176,9 +185,16 @@ export function DatasetEditDialog({ dataset }: DatasetEditDialogProps) {
                   <label className="text-sm font-medium text-zinc-700">数据大小</label>
                   <Input
                     type="number"
+                    min="0"
+                    max="9999999999.99"
+                    step="0.01"
                     value={form.data_size}
-                    onChange={(e) => handleChange("data_size", Number(e.target.value))}
+                    onChange={(e) => handleChange("data_size", e.target.value)}
                   />
+                  <p className="text-xs text-zinc-500">{DATA_SIZE_LIMIT_HINT}</p>
+                  {getDataSizeError(form.data_size) && (
+                    <p className="text-xs text-rose-600">{getDataSizeError(form.data_size)}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-zinc-700">单位</label>

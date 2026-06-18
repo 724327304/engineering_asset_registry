@@ -6,6 +6,7 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createDataset } from "@/lib/api";
+import { DATA_SIZE_LIMIT_HINT, getDataSizeError } from "@/lib/dataset-validation";
 import type { Dataset } from "@/lib/types";
 
 type DatasetCreateDialogProps = {
@@ -24,7 +25,7 @@ export function DatasetCreateDialog({ onCreated }: DatasetCreateDialogProps = {}
     source: "task_produced",
     dataset_type: "table",
     location_path: "",
-    data_size: 0,
+    data_size: "0",
     size_unit: "B",
     record_count: 0,
     owner: "",
@@ -40,7 +41,18 @@ export function DatasetCreateDialog({ onCreated }: DatasetCreateDialogProps = {}
     setSubmitting(true);
     setError(null);
 
-    const result = await createDataset(form);
+    const dataSizeError = getDataSizeError(form.data_size);
+    if (dataSizeError) {
+      setError(dataSizeError);
+      setSubmitting(false);
+      return;
+    }
+
+    const result = await createDataset({
+      ...form,
+      data_size: Number(form.data_size || 0),
+      record_count: Number(form.record_count || 0),
+    });
 
     if (result.error) {
       setError(result.error);
@@ -55,7 +67,7 @@ export function DatasetCreateDialog({ onCreated }: DatasetCreateDialogProps = {}
       source: "task_produced",
       dataset_type: "table",
       location_path: "",
-      data_size: 0,
+      data_size: "0",
       size_unit: "B",
       record_count: 0,
       owner: "",
@@ -193,9 +205,16 @@ export function DatasetCreateDialog({ onCreated }: DatasetCreateDialogProps = {}
                   <label className="text-sm font-medium text-zinc-700">数据大小</label>
                   <Input
                     type="number"
+                    min="0"
+                    max="9999999999.99"
+                    step="0.01"
                     value={form.data_size}
                     onChange={(e) => handleChange("data_size", e.target.value)}
                   />
+                  <p className="text-xs text-zinc-500">{DATA_SIZE_LIMIT_HINT}</p>
+                  {getDataSizeError(form.data_size) && (
+                    <p className="text-xs text-rose-600">{getDataSizeError(form.data_size)}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-zinc-700">单位</label>

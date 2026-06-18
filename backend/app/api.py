@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from .db import get_db
 from . import crud, schemas
+from .oss_storage import get_oss_storage_report
 
 router = APIRouter()
 
@@ -76,3 +77,10 @@ def list_tasks_by_dataset(dataset_id: int, db: Session = Depends(get_db)):
 @router.get("/dashboard", response_model=schemas.DashboardOut)
 def dashboard(db: Session = Depends(get_db)):
     return crud.get_dashboard(db)
+
+
+# ═══════════════ Storage ═══════════════
+
+@router.get("/storage/oss", response_model=schemas.OssStorageOut)
+def oss_storage():
+    return get_oss_storage_report()

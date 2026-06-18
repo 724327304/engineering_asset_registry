@@ -280,10 +280,10 @@ export default function TaskListPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
-                        {task.sizeBeforeLabel}
+                        {task.sizeBeforeDisplayLabel}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
-                        {task.sizeAfterLabel}
+                        {task.sizeAfterDisplayLabel}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 hidden xl:table-cell">
                         {task.recordBeforeLabel}

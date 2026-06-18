@@ -258,7 +258,7 @@ export default function DatasetListPage() {
                         {dataset.datasetTypeLabel}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
-                        {dataset.sizeLabel}
+                        {dataset.sizeDisplayLabel}
                       </td>
                       <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
                         {dataset.recordCountLabel}

@@ -20,7 +20,7 @@ erDiagram
         BIGSERIAL   id              PK  "任务ID"
         BIGINT      dataset_id      FK  "关联 dataset.id"
         VARCHAR     task_name       "任务名称"
-        VARCHAR     task_type       "质量过滤 / 模型过滤 / 去重"
+        VARCHAR     task_type       "质量过滤 / 模型过滤 / 模糊去重 / 精确去重 / 数据解析 / 数据抽取"
         VARCHAR     input_source    "输入来源"
         VARCHAR     output_location "输出路径"
         BIGINT      size_before     "输入数据大小 bytes"
