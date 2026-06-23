@@ -131,6 +131,11 @@ export type Task = {
   createdAtLabel: string;
 };
 
+export type TrendPoint = {
+  date: string;
+  count: number;
+};
+
 export type Dashboard = {
   datasetCount: number;
   taskCount: number;
@@ -139,4 +144,6 @@ export type Dashboard = {
   storageBytes: number;
   storageLabel: string;
   ownerCount: number;
+  datasetTrends?: TrendPoint[];
+  taskTrends?: TrendPoint[];
 };

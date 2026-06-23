@@ -132,8 +132,8 @@ npm run dev
 - `output_dataset_id`: 输出数据集 ID
 - `task_name`: 任务名称
 - `task_type`: 任务类型
-- `size_before` / `size_after`: 处理前后大小
-- `size_unit` / `size_after_unit`: 处理前后大小单位
+- `size_before` / `size_after`: 处理前后大小，支持小数
+- `size_unit` / `size_after_unit`: 处理前后大小单位；`size_after_unit` 应与输出数据集的 `size_unit` 保持一致
 - `record_before` / `record_after`: 处理前后记录数
 - `duration_seconds`: 任务耗时，单位为秒
 - `status`: `success`、`failed` 或 `running`
@@ -229,6 +229,7 @@ PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d engineering_asset_registry 
 ## 说明
 
 - 存储量展示会按 `data_size + size_unit` 换算后聚合。
+- 任务数据变化展示会按 `size_before + size_unit`、`size_after + size_after_unit` 换算后计算留存率。
 - 仪表盘存储量只统计 `active` 数据集。
 - 已删除数据集可以保留历史大小和记录数，但存储地址可能为空。
 - CC dump 相关页面排序默认按 `CC-MAIN-YYYY-WW` 批次倒序。

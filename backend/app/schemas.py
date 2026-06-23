@@ -127,6 +127,16 @@ class DashboardOut(BaseModel):
     active_datasets: int
 
 
+class TrendPoint(BaseModel):
+    date: str
+    count: int
+
+
+class DashboardTrendsOut(BaseModel):
+    dataset_trends: list[TrendPoint]
+    task_trends: list[TrendPoint]
+
+
 # ── OSS Storage ────────────────────────────────────────────
 
 class OssBucketUsageOut(BaseModel):

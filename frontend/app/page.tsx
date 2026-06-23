@@ -1,5 +1,6 @@
 import { Boxes, Database, HardDrive, Users } from "lucide-react";
 
+import { TrendsSection } from "@/components/dashboard/trends-section";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +53,8 @@ export default async function DashboardPage() {
           icon={HardDrive}
         />
       </section>
+
+      <TrendsSection />
 
       <section>
         <Card>

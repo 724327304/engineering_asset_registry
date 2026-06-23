@@ -79,6 +79,11 @@ def dashboard(db: Session = Depends(get_db)):
     return crud.get_dashboard(db)
 
 
+@router.get("/dashboard/trends", response_model=schemas.DashboardTrendsOut)
+def dashboard_trends(db: Session = Depends(get_db)):
+    return crud.get_dashboard_trends(db)
+
+
 # ═══════════════ Storage ═══════════════
 
 @router.get("/storage/oss", response_model=schemas.OssStorageOut)

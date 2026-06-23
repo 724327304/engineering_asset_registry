@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS dataset_task (
 
     size_after            NUMERIC(12,2) DEFAULT 0,
 
+    size_after_unit       VARCHAR(10) NOT NULL DEFAULT 'B',
+
     record_before         BIGINT DEFAULT 0,
 
     record_after          BIGINT DEFAULT 0,

@@ -97,7 +97,7 @@ Database: PostgreSQL
 | `size_before` | 处理前大小，支持小数 |
 | `size_unit` | 处理前大小单位 |
 | `size_after` | 处理后大小，支持小数 |
-| `size_after_unit` | 处理后大小单位 |
+| `size_after_unit` | 处理后大小单位，应与输出数据集的 `size_unit` 保持一致 |
 | `record_before` | 处理前记录数 |
 | `record_after` | 处理后记录数 |
 | `duration_seconds` | 耗时，单位秒 |
@@ -136,6 +136,7 @@ Database: PostgreSQL
 - Dashboard 汇总接口。
 - PostgreSQL 表结构支持 GB/TB 等单位和小数大小。
 - 任务大小字段 `size_before` / `size_after` 支持小数。
+- 任务数据变化展示按 `size_before + size_unit`、`size_after + size_after_unit` 换算后计算留存率。
 
 ### 5.2 前端页面
 
@@ -207,6 +208,15 @@ data_size + size_unit
 ```
 
 换算为 bytes 后再汇总。
+
+任务数据变化和留存率计算必须使用：
+
+```text
+size_before + size_unit
+size_after + size_after_unit
+```
+
+换算为 bytes 后再计算比例，避免 GB、TB、B 等单位混用导致展示错误。
 
 ### 7.4 活跃口径和历史口径分开
 
@@ -311,6 +321,40 @@ GET /storage/oss/list?path=oss://bucket/prefix/
 GET /datasets?status=&source=&dataset_type=&owner=&q=&limit=&offset=&sort=
 GET /datasets/export?status=&source=&dataset_type=&owner=&q=
 ```
+
+### 8.4 镜像版本（配置版本）管理
+
+目标：记录任务执行时使用的镜像版本、代码版本和配置版本，便于复现任务结果和排查差异。
+
+建议范围：
+
+- 在任务创建或任务完成时记录镜像版本。
+- 将配置版本纳入任务元信息，可复用 `code_version` 或扩展 `config`。
+- 前端任务详情页展示镜像版本、配置版本和关键运行参数。
+- 支持按版本筛选任务，便于对比不同版本产出的数据集。
+
+待明确事项：
+
+- 镜像版本来源：任务平台注入、手动录入，还是从运行日志解析。
+- 配置版本是否需要独立表管理。
+- 是否需要保存完整配置快照，还是只保存配置版本号。
+
+### 8.5 任务结束时自动创建任务记录
+
+目标：任务运行结束后自动写入 `dataset_task` 记录，减少人工录入并保证任务元数据及时沉淀。
+
+建议范围：
+
+- 提供任务完成回调接口或采集入口。
+- 自动关联输入数据集和输出数据集。
+- 自动记录任务类型、状态、开始/结束时间、耗时、处理前后大小和记录数。
+- 任务失败时也创建记录，并保存失败状态和错误摘要。
+
+待明确事项：
+
+- 自动创建记录由任务平台主动回调，还是后端定时扫描任务结果。
+- 输入/输出数据集如何通过路径、名称或任务 ID 匹配。
+- 自动创建的数据是否允许人工修正。
 
 ## 九、后续演进方向
 

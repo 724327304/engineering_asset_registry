@@ -6,6 +6,7 @@ import type {
   Task,
   TaskCreateInput,
   TaskUpdateInput,
+  TrendPoint,
 } from "@/lib/types";
 import { toDurationSeconds } from "@/lib/duration";
 
@@ -337,6 +338,38 @@ export async function getDashboard(): Promise<ApiResult<Dashboard>> {
       storageBytes,
       storageLabel: formatBytes(storageBytes),
       ownerCount,
+    },
+    error: null,
+  };
+}
+
+type BackendTrendPoint = {
+  date: string;
+  count: number;
+};
+
+type BackendDashboardTrends = {
+  dataset_trends: BackendTrendPoint[];
+  task_trends: BackendTrendPoint[];
+};
+
+export async function getDashboardTrends(): Promise<ApiResult<{ datasetTrends: TrendPoint[]; taskTrends: TrendPoint[] }>> {
+  const result = await safeRequest<BackendDashboardTrends>("/dashboard/trends");
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "趋势数据读取失败" };
+  }
+
+  return {
+    data: {
+      datasetTrends: result.data.dataset_trends.map((p) => ({
+        date: p.date,
+        count: p.count,
+      })),
+      taskTrends: result.data.task_trends.map((p) => ({
+        date: p.date,
+        count: p.count,
+      })),
     },
     error: null,
   };

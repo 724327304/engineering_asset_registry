@@ -124,3 +124,51 @@ def get_dashboard(db: Session, recent_limit: int = 10) -> schemas.DashboardOut:
         recent_tasks=recent_tasks,
         active_datasets=active_datasets,
     )
+
+
+def get_dashboard_trends(db: Session) -> schemas.DashboardTrendsOut:
+    from sqlalchemy import cast, Date as SQLDate
+
+    # ── 数据集每日累计趋势 ──
+    dataset_rows = (
+        db.query(
+            cast(models.Dataset.created_at, SQLDate).label("date"),
+            func.count(models.Dataset.id).label("daily"),
+        )
+        .group_by("date")
+        .order_by("date")
+        .all()
+    )
+
+    dataset_trends: list[schemas.TrendPoint] = []
+    running = 0
+    for row in dataset_rows:
+        running += row.daily
+        dataset_trends.append(
+            schemas.TrendPoint(date=str(row.date), count=running)
+        )
+
+    # ── 任务每日累计趋势（按完成时间 end_time 统计）──
+    task_rows = (
+        db.query(
+            cast(models.DatasetTask.end_time, SQLDate).label("date"),
+            func.count(models.DatasetTask.id).label("daily"),
+        )
+        .filter(models.DatasetTask.end_time.isnot(None))
+        .group_by("date")
+        .order_by("date")
+        .all()
+    )
+
+    task_trends: list[schemas.TrendPoint] = []
+    running = 0
+    for row in task_rows:
+        running += row.daily
+        task_trends.append(
+            schemas.TrendPoint(date=str(row.date), count=running)
+        )
+
+    return schemas.DashboardTrendsOut(
+        dataset_trends=dataset_trends,
+        task_trends=task_trends,
+    )
