@@ -3,6 +3,41 @@ from typing import Optional, Any
 from datetime import datetime
 
 
+# ── Project ────────────────────────────────────────────────
+
+class ProjectCreate(BaseModel):
+    """创建项目的请求体"""
+    name: str = Field(..., max_length=255, description="项目名称（唯一），最长 255 字符")
+    description: Optional[str] = Field("", description="项目描述，可选")
+    owner: str = Field(..., max_length=128, description="项目负责人账号或姓名")
+    status: str = Field(default="active", pattern="^(active|archived)$",
+                        description="项目状态：active-活跃，archived-已归档")
+
+
+class ProjectUpdate(BaseModel):
+    """更新项目的请求体（所有字段可选）"""
+    name: Optional[str] = Field(None, max_length=255, description="项目名称（唯一）")
+    description: Optional[str] = Field(None, description="项目描述")
+    owner: Optional[str] = Field(None, max_length=128, description="项目负责人")
+    status: Optional[str] = Field(None, pattern="^(active|archived)$",
+                                  description="项目状态：active/archived")
+
+
+class ProjectOut(BaseModel):
+    """项目完整信息（响应体）"""
+    id: int = Field(..., description="项目唯一标识 ID")
+    name: str = Field(..., description="项目名称")
+    description: Optional[str] = Field(None, description="项目描述")
+    owner: str = Field(..., description="项目负责人")
+    status: str = Field(..., description="项目状态")
+    dataset_count: Optional[int] = Field(None, description="该项目下的数据集数量")
+    task_count: Optional[int] = Field(None, description="该项目下的任务数量")
+    created_at: datetime = Field(..., description="创建时间（ISO 8601）")
+    updated_at: datetime = Field(..., description="最后更新时间（ISO 8601）")
+
+    model_config = {"from_attributes": True}
+
+
 # ── Dataset ────────────────────────────────────────────────
 
 class DatasetCreate(BaseModel):
@@ -19,6 +54,7 @@ class DatasetCreate(BaseModel):
     size_unit: Optional[str] = Field("B", description="数据大小单位，如 B/KB/MB/GB/TB，默认 B")
     record_count: int = Field(0, description="记录/文件/行数，默认 0")
     owner: str = Field(..., max_length=128, description="负责人账号或姓名")
+    project_id: Optional[int] = Field(None, description="所属项目 ID（可选）")
     status: str = Field(default="active", pattern="^(active|deleted)$",
                         description="状态：active-活跃，deleted-已删除")
 
@@ -36,6 +72,7 @@ class DatasetUpdate(BaseModel):
     size_unit: Optional[str] = Field(None, description="数据大小单位，如 B/KB/MB/GB/TB")
     record_count: Optional[int] = Field(None, description="记录/文件/行数")
     owner: Optional[str] = Field(None, max_length=128, description="负责人账号或姓名")
+    project_id: Optional[int] = Field(None, description="所属项目 ID（可选）")
     status: Optional[str] = Field(None, pattern="^(active|deleted)$",
                                   description="状态：active-活跃，deleted-已删除")
 
@@ -52,6 +89,7 @@ class DatasetOut(BaseModel):
     size_unit: Optional[str] = Field(None, description="数据大小单位")
     record_count: int = Field(..., description="记录/文件/行数")
     owner: str = Field(..., description="负责人")
+    project_id: Optional[int] = Field(None, description="所属项目 ID")
     status: str = Field(..., description="状态")
     created_at: datetime = Field(..., description="创建时间（ISO 8601）")
     updated_at: datetime = Field(..., description="最后更新时间（ISO 8601）")
@@ -82,6 +120,7 @@ class DatasetTaskCreate(BaseModel):
     executor: Optional[str] = Field("", description="执行人/执行系统")
     code_version: Optional[str] = Field("", description="代码版本号")
     config: Optional[Any] = Field(None, description="任务配置参数（JSON 对象）")
+    project_id: Optional[int] = Field(None, description="所属项目 ID（可选）")
     start_time: Optional[datetime] = Field(None, description="任务开始时间（ISO 8601）")
     end_time: Optional[datetime] = Field(None, description="任务结束时间（ISO 8601）")
 
@@ -107,6 +146,7 @@ class DatasetTaskUpdate(BaseModel):
     executor: Optional[str] = Field(None, max_length=128, description="执行人/执行系统")
     code_version: Optional[str] = Field(None, max_length=128, description="代码版本号")
     config: Optional[Any] = Field(None, description="任务配置参数（JSON 对象）")
+    project_id: Optional[int] = Field(None, description="所属项目 ID（可选）")
     start_time: Optional[datetime] = Field(None, description="任务开始时间（ISO 8601）")
     end_time: Optional[datetime] = Field(None, description="任务结束时间（ISO 8601）")
 
@@ -130,6 +170,7 @@ class DatasetTaskOut(BaseModel):
     executor: Optional[str] = Field(None, description="执行人")
     code_version: Optional[str] = Field(None, description="代码版本号")
     config: Optional[Any] = Field(None, description="任务配置参数（JSON 对象）")
+    project_id: Optional[int] = Field(None, description="所属项目 ID")
     start_time: Optional[datetime] = Field(None, description="任务开始时间（ISO 8601）")
     end_time: Optional[datetime] = Field(None, description="任务结束时间（ISO 8601）")
     created_at: datetime = Field(..., description="记录创建时间（ISO 8601）")
@@ -183,3 +224,33 @@ class OssStorageOut(BaseModel):
     total_used_bytes: int = Field(..., description="所有 bucket 已用总容量（字节）")
     total_remaining_bytes: int = Field(..., description="所有 bucket 剩余总容量（字节）")
     buckets: list[OssBucketUsageOut] = Field(..., description="各 bucket 用量明细")
+
+
+# ── OSS Tools ─────────────────────────────────────────────
+
+class OssToolsRequest(BaseModel):
+    """OSS 工具箱请求体"""
+    oss_path: str = Field(..., description="OSS 目录路径，格式：oss://bucket-name/prefix/")
+    sample_size: Optional[int] = Field(None, description="抽样数量（100/1000/10000），仅抽样接口使用")
+
+
+class OssListFilesOut(BaseModel):
+    """OSS 文件列表响应"""
+    oss_path: str = Field(..., description="请求的 OSS 路径")
+    bucket: str = Field(..., description="Bucket 名称")
+    prefix: str = Field(..., description="目录前缀")
+    total_files: int = Field(..., description="目录下文件总数")
+    top_files: list[str] = Field(..., description="前 10 条文件名称")
+    generated_at: str = Field(..., description="查询时间（ISO 8601）")
+
+
+class OssSampleOut(BaseModel):
+    """OSS 随机抽样响应（返回内容行）"""
+    oss_path: str = Field(..., description="请求的 OSS 路径")
+    bucket: str = Field(..., description="Bucket 名称")
+    prefix: str = Field(..., description="目录前缀")
+    sample_size: int = Field(..., description="实际抽样行数")
+    total_files: int = Field(..., description="目录下符合条件文件总数")
+    sample_lines: list[str] = Field(..., description="抽中的行内容列表")
+    errors: list[str] = Field(..., description="抽样过程中的错误信息列表")
+    generated_at: str = Field(..., description="查询时间（ISO 8601）")

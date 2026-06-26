@@ -3,6 +3,11 @@ import type {
   Dataset,
   DatasetCreateInput,
   DatasetUpdateInput,
+  OssListFilesResult,
+  OssSampleResult,
+  Project,
+  ProjectCreateInput,
+  ProjectUpdateInput,
   Task,
   TaskCreateInput,
   TaskUpdateInput,
@@ -33,6 +38,7 @@ type BackendDataset = {
   size_unit: string | null;
   record_count: number;
   owner: string;
+  project_id: number | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -56,9 +62,42 @@ type BackendTask = {
   executor: string | null;
   code_version: string | null;
   config: unknown;
+  project_id: number | null;
   start_time: string | null;
   end_time: string | null;
   created_at: string;
+};
+
+type BackendProject = {
+  id: number;
+  name: string;
+  description: string | null;
+  owner: string;
+  status: string;
+  dataset_count?: number;
+  task_count?: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type BackendOssListFiles = {
+  oss_path: string;
+  bucket: string;
+  prefix: string;
+  total_files: number;
+  top_files: string[];
+  generated_at: string;
+};
+
+type BackendOssSample = {
+  oss_path: string;
+  bucket: string;
+  prefix: string;
+  sample_size: number;
+  total_files: number;
+  sample_lines: string[];
+  errors: string[];
+  generated_at: string;
 };
 
 type BackendDashboard = {
@@ -153,6 +192,57 @@ async function safeRequest<T>(path: string, options?: RequestInit): Promise<ApiR
   }
 }
 
+// ═══════════════ Project API ═══════════════
+
+export async function createProject(input: ProjectCreateInput): Promise<ApiResult<Project>> {
+  const result = await safeRequest<BackendProject>("/projects", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "项目创建失败" };
+  }
+
+  return { data: toProject(result.data), error: null };
+}
+
+export async function getProjects(): Promise<ApiResult<Project[]>> {
+  const result = await safeRequest<BackendProject[]>("/projects");
+  if (result.error || !result.data) return { data: null, error: result.error ?? "项目列表读取失败" };
+
+  return { data: result.data.map(toProject), error: null };
+}
+
+export async function getProject(id: string): Promise<ApiResult<Project>> {
+  const result = await safeRequest<BackendProject>(`/projects/${id}`);
+  if (result.error || !result.data) return { data: null, error: result.error ?? "项目读取失败" };
+
+  return { data: toProject(result.data), error: null };
+}
+
+export async function updateProject(
+  id: string | number,
+  input: ProjectUpdateInput,
+): Promise<ApiResult<Project>> {
+  const result = await safeRequest<BackendProject>(`/projects/${id}`, {
+    method: "PUT",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "项目更新失败" };
+  }
+
+  return { data: toProject(result.data), error: null };
+}
+
+// ═══════════════ Dataset API ═══════════════
+
 export async function createDataset(input: DatasetCreateInput): Promise<ApiResult<Dataset>> {
   const result = await safeRequest<BackendDataset>("/datasets", {
     method: "POST",
@@ -192,8 +282,9 @@ export async function updateDataset(
   };
 }
 
-export async function getDatasets(): Promise<ApiResult<Dataset[]>> {
-  const result = await safeRequest<BackendDataset[]>("/datasets");
+export async function getDatasets(projectId?: number): Promise<ApiResult<Dataset[]>> {
+  const path = projectId ? `/datasets?project_id=${projectId}` : "/datasets";
+  const result = await safeRequest<BackendDataset[]>(path);
   if (result.error || !result.data) return { data: null, error: result.error ?? "数据集读取失败" };
 
   return {
@@ -212,9 +303,23 @@ export async function getDataset(id: string): Promise<ApiResult<Dataset>> {
   };
 }
 
-export async function getTasks(): Promise<ApiResult<Task[]>> {
+// ═══════════════ Task API ═══════════════
+
+export async function getTasks(
+  projectId?: number,
+  startTime?: string,
+  endTime?: string,
+  taskType?: string,
+): Promise<ApiResult<Task[]>> {
+  const params = new URLSearchParams();
+  if (projectId) params.set("project_id", String(projectId));
+  if (startTime) params.set("start_time", startTime);
+  if (endTime) params.set("end_time", endTime);
+  if (taskType) params.set("task_type", taskType);
+  const qs = params.toString();
+  const path = qs ? `/tasks?${qs}` : "/tasks";
   const [tasksResult, datasetsResult] = await Promise.all([
-    safeRequest<BackendTask[]>("/tasks"),
+    safeRequest<BackendTask[]>(path),
     safeRequest<BackendDataset[]>("/datasets"),
   ]);
 
@@ -308,9 +413,69 @@ export async function updateTask(
   };
 }
 
-export async function getDashboard(): Promise<ApiResult<Dashboard>> {
+// ═══════════════ OSS Tools API ═══════════════
+
+export async function listOssFiles(ossPath: string): Promise<ApiResult<OssListFilesResult>> {
+  const result = await safeRequest<BackendOssListFiles>("/tools/oss/list-files", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oss_path: ossPath }),
+  });
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "文件列表统计失败" };
+  }
+
+  return {
+    data: {
+      ossPath: result.data.oss_path,
+      bucket: result.data.bucket,
+      prefix: result.data.prefix,
+      totalFiles: result.data.total_files,
+      topFiles: result.data.top_files,
+      generatedAt: result.data.generated_at,
+    },
+    error: null,
+  };
+}
+
+export async function sampleOssFiles(
+  ossPath: string,
+  sampleSize: number,
+): Promise<ApiResult<OssSampleResult>> {
+  const result = await safeRequest<BackendOssSample>("/tools/oss/sample-files", {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oss_path: ossPath, sample_size: sampleSize }),
+  });
+
+  if (result.error || !result.data) {
+    return { data: null, error: result.error ?? "文件抽样统计失败" };
+  }
+
+  return {
+    data: {
+      ossPath: result.data.oss_path,
+      bucket: result.data.bucket,
+      prefix: result.data.prefix,
+      sampleSize: result.data.sample_size,
+      totalFiles: result.data.total_files,
+      sampleLines: result.data.sample_lines,
+      errors: result.data.errors,
+      generatedAt: result.data.generated_at,
+    },
+    error: null,
+  };
+}
+
+// ═══════════════ Dashboard API ═══════════════
+
+export async function getDashboard(projectId?: number): Promise<ApiResult<Dashboard>> {
+  const path = projectId ? `/dashboard?project_id=${projectId}` : "/dashboard";
   const [dashboardResult, datasetsResult] = await Promise.all([
-    safeRequest<BackendDashboard>("/dashboard"),
+    safeRequest<BackendDashboard>(path),
     safeRequest<BackendDataset[]>("/datasets"),
   ]);
 
@@ -353,8 +518,9 @@ type BackendDashboardTrends = {
   task_trends: BackendTrendPoint[];
 };
 
-export async function getDashboardTrends(): Promise<ApiResult<{ datasetTrends: TrendPoint[]; taskTrends: TrendPoint[] }>> {
-  const result = await safeRequest<BackendDashboardTrends>("/dashboard/trends");
+export async function getDashboardTrends(projectId?: number): Promise<ApiResult<{ datasetTrends: TrendPoint[]; taskTrends: TrendPoint[] }>> {
+  const path = projectId ? `/dashboard/trends?project_id=${projectId}` : "/dashboard/trends";
+  const result = await safeRequest<BackendDashboardTrends>(path);
 
   if (result.error || !result.data) {
     return { data: null, error: result.error ?? "趋势数据读取失败" };
@@ -390,6 +556,22 @@ export async function getOssStorage(): Promise<ApiResult<OssStorage>> {
   };
 }
 
+// ═══════════════ Data Transformers ═══════════════
+
+function toProject(project: BackendProject): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    description: project.description ?? "",
+    owner: project.owner,
+    status: project.status,
+    datasetCount: project.dataset_count,
+    taskCount: project.task_count,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
+  };
+}
+
 function toDataset(dataset: BackendDataset): Dataset {
   return {
     id: dataset.id,
@@ -407,6 +589,7 @@ function toDataset(dataset: BackendDataset): Dataset {
     recordCount: Number(dataset.record_count ?? 0),
     recordCountLabel: formatNumber(Number(dataset.record_count ?? 0)),
     owner: dataset.owner,
+    projectId: dataset.project_id ?? undefined,
     status: dataset.status,
     statusLabel: formatDatasetStatus(dataset.status),
     createdAt: dataset.created_at,
@@ -461,6 +644,7 @@ function toTask(task: BackendTask, datasetNames?: Map<number, string>): Task {
     codeVersion: task.code_version ?? "",
     config: task.config,
     configLabel: formatConfig(task.config),
+    projectId: task.project_id ?? undefined,
     startTime: task.start_time,
     endTime: task.end_time,
     createdAt: task.created_at,

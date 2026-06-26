@@ -1,20 +1,19 @@
 import { Boxes, Database, HardDrive, Users } from "lucide-react";
 
+import { OssStorageOverview } from "@/components/dashboard/oss-storage-overview";
 import { TrendsSection } from "@/components/dashboard/trends-section";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboard } from "@/lib/api";
-import type { Task } from "@/lib/types";
 
-function statusVariant(status: Task["status"]) {
-  if (status === "success") return "success";
-  if (status === "running") return "warning";
-  return "destructive";
-}
-
-export default async function DashboardPage() {
-  const dashboardResult = await getDashboard();
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project_id?: string }>;
+}) {
+  const params = await searchParams;
+  const projectId = params.project_id ? Number(params.project_id) : undefined;
+  const dashboardResult = await getDashboard(projectId);
 
   if (dashboardResult.error) {
     return <BackendUnavailable error={dashboardResult.error} />;
@@ -54,35 +53,9 @@ export default async function DashboardPage() {
         />
       </section>
 
-      <TrendsSection />
+      <TrendsSection projectId={projectId} />
 
-      <section>
-        <Card>
-          <CardHeader className="border-b border-zinc-200 pb-4">
-            <CardTitle className="text-sm">最近活动</CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y divide-zinc-100 p-0">
-            {dashboard.recentTasks.length === 0 ? (
-              <div className="px-5 py-10 text-center text-sm text-zinc-500">暂无任务记录</div>
-            ) : null}
-            {dashboard.recentTasks.map((task) => (
-              <div
-                key={task.id}
-                className="grid grid-cols-[1.6fr_1fr_0.8fr_0.7fr_auto] items-center gap-5 px-5 py-4"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-zinc-950">{task.name}</div>
-                  <div className="mt-1 text-xs text-zinc-500">{task.startTimeLabel}</div>
-                </div>
-                <div className="min-w-0 truncate text-sm text-zinc-700">{task.outputDatasetName}</div>
-                <div className="text-sm text-zinc-700">{task.type}</div>
-                <div className="text-sm text-zinc-700">{task.durationLabel}</div>
-                <Badge variant={statusVariant(task.status)}>{task.statusLabel}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
+      <OssStorageOverview />
     </div>
   );
 }

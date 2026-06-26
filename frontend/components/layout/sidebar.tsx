@@ -11,6 +11,7 @@ import {
   ListChecks,
   Search,
   Users,
+  Wrench,
 } from "lucide-react";
 
 import { getDatasets, getTasks } from "@/lib/api";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/search", label: "全局搜索", icon: Search },
   { href: "/owners", label: "负责人", icon: Users },
   { href: "/storage", label: "存储概览", icon: HardDrive },
+  { href: "/tools", label: "工具箱", icon: Wrench },
 ];
 
 export function Sidebar() {

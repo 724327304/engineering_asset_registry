@@ -21,29 +21,37 @@ Base = declarative_base()
 
 
 def _run_migrations():
-    """为已有表补齐新增字段（兼容旧 SQLite 数据库）"""
+    """为已有表补齐新增字段"""
     inspector = inspect(engine)
-    # dataset 表新增 size_unit
+    # dataset 表
     dataset_cols = {c["name"] for c in inspector.get_columns("dataset")}
     if "size_unit" not in dataset_cols:
         logger.info("Migrating: adding column dataset.size_unit")
         with engine.connect() as conn:
-            col_type = "VARCHAR(10)" if "postgresql" in DATABASE_URL else "VARCHAR(10)"
-            conn.execute(text(f"ALTER TABLE dataset ADD COLUMN size_unit {col_type} DEFAULT 'B'"))
+            conn.execute(text("ALTER TABLE dataset ADD COLUMN size_unit VARCHAR(10) DEFAULT 'B'"))
             conn.commit()
-    # dataset_task 表新增 duration_unit
+    if "project_id" not in dataset_cols:
+        logger.info("Migrating: adding column dataset.project_id")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE dataset ADD COLUMN project_id BIGINT"))
+            conn.commit()
+
+    # dataset_task 表
     task_cols = {c["name"] for c in inspector.get_columns("dataset_task")}
     if "duration_unit" not in task_cols:
         logger.info("Migrating: adding column dataset_task.duration_unit")
         with engine.connect() as conn:
-            col_type = "VARCHAR(10)" if "postgresql" in DATABASE_URL else "VARCHAR(10)"
-            conn.execute(text(f"ALTER TABLE dataset_task ADD COLUMN duration_unit {col_type} DEFAULT 'seconds'"))
+            conn.execute(text("ALTER TABLE dataset_task ADD COLUMN duration_unit VARCHAR(10) DEFAULT 'seconds'"))
             conn.commit()
     if "size_unit" not in task_cols:
         logger.info("Migrating: adding column dataset_task.size_unit")
         with engine.connect() as conn:
-            col_type = "VARCHAR(10)" if "postgresql" in DATABASE_URL else "VARCHAR(10)"
-            conn.execute(text(f"ALTER TABLE dataset_task ADD COLUMN size_unit {col_type} DEFAULT 'B'"))
+            conn.execute(text("ALTER TABLE dataset_task ADD COLUMN size_unit VARCHAR(10) DEFAULT 'B'"))
+            conn.commit()
+    if "project_id" not in task_cols:
+        logger.info("Migrating: adding column dataset_task.project_id")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE dataset_task ADD COLUMN project_id BIGINT"))
             conn.commit()
 
 

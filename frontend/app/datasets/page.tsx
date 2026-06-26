@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Database,
@@ -62,6 +63,10 @@ function compareByDumpBatch(a: Dataset, b: Dataset) {
 }
 
 export default function DatasetListPage() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project_id");
+  const projectIdNum = projectId ? Number(projectId) : undefined;
+
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("active");
@@ -71,14 +76,14 @@ export default function DatasetListPage() {
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
-    getDatasets().then((result) => {
+    getDatasets(projectIdNum).then((result) => {
       if (result.error) {
         setError(result.error);
       } else {
         setDatasets(result.data ?? []);
       }
     });
-  }, []);
+  }, [projectIdNum]);
 
   // Filter → sort → paginate
   const filtered = useMemo(() => {

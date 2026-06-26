@@ -9,6 +9,24 @@ ID_TYPE = BigInteger().with_variant(Integer, "sqlite")
 JSON_TYPE = JSON().with_variant(JSONB, "postgresql")
 
 
+class Project(Base):
+    """项目表 — 对数据集和任务进行分组管理"""
+
+    __tablename__ = "project"
+
+    id          = Column(ID_TYPE, primary_key=True, autoincrement=True, index=True)
+    name        = Column(String(255), nullable=False, unique=True)
+    description = Column(Text, default="")
+    owner       = Column(String(128), nullable=False)
+    status      = Column(String(20), nullable=False, default="active")
+    created_at  = Column(DateTime(timezone=True), default=datetime.now)
+    updated_at  = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+
+    datasets = relationship("Dataset", back_populates="project", passive_deletes=True)
+    tasks    = relationship("DatasetTask", back_populates="project", passive_deletes=True,
+                            foreign_keys="DatasetTask.project_id")
+
+
 class Dataset(Base):
     """数据资产表 — 与 schema.sql 中 dataset 表完全对应"""
 
@@ -25,8 +43,11 @@ class Dataset(Base):
     record_count  = Column(BigInteger, default=0)
     owner         = Column(String(128), nullable=False)
     status        = Column(String(20), nullable=False, default="active")
+    project_id    = Column(ID_TYPE, ForeignKey("project.id", ondelete="SET NULL"), nullable=True)
     created_at    = Column(DateTime, default=datetime.now)
     updated_at    = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    project = relationship("Project", back_populates="datasets")
 
     input_tasks = relationship(
         "DatasetTask",
@@ -64,9 +85,12 @@ class DatasetTask(Base):
     executor         = Column(String(128), default="")
     code_version     = Column(String(128), default="")
     config           = Column(JSON_TYPE, default=dict)
+    project_id       = Column(ID_TYPE, ForeignKey("project.id", ondelete="SET NULL"), nullable=True)
     start_time       = Column(DateTime(timezone=True))
     end_time         = Column(DateTime(timezone=True))
     created_at       = Column(DateTime, default=datetime.now)
+
+    project = relationship("Project", back_populates="tasks", foreign_keys=[project_id])
 
     input_dataset = relationship(
         "Dataset",

@@ -1,3 +1,29 @@
+export type ProjectCreateInput = {
+  name: string;
+  description?: string;
+  owner: string;
+  status?: string;
+};
+
+export type ProjectUpdateInput = {
+  name?: string;
+  description?: string;
+  owner?: string;
+  status?: string;
+};
+
+export type Project = {
+  id: number;
+  name: string;
+  description: string;
+  owner: string;
+  status: string;
+  datasetCount?: number;
+  taskCount?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type DatasetCreateInput = {
   name: string;
   description?: string;
@@ -8,6 +34,7 @@ export type DatasetCreateInput = {
   size_unit?: string;
   record_count?: number;
   owner: string;
+  project_id?: number;
   status?: string;
 };
 
@@ -21,6 +48,7 @@ export type DatasetUpdateInput = {
   size_unit?: string;
   record_count?: number;
   owner?: string;
+  project_id?: number;
   status?: string;
 };
 
@@ -43,6 +71,7 @@ export type Dataset = {
   recordCount: number;
   recordCountLabel: string;
   owner: string;
+  projectId?: number;
   status: DatasetStatus | string;
   statusLabel: string;
   createdAt: string;
@@ -67,6 +96,7 @@ export type TaskCreateInput = {
   executor?: string;
   code_version?: string;
   config?: unknown;
+  project_id?: number;
   start_time?: string;
   end_time?: string;
 };
@@ -88,6 +118,7 @@ export type TaskUpdateInput = {
   executor?: string;
   code_version?: string;
   config?: unknown;
+  project_id?: number;
   start_time?: string;
   end_time?: string;
 };
@@ -123,6 +154,7 @@ export type Task = {
   codeVersion: string;
   config: unknown;
   configLabel: string;
+  projectId?: number;
   startTime: string | null;
   endTime: string | null;
   createdAt: string;
@@ -134,6 +166,26 @@ export type Task = {
 export type TrendPoint = {
   date: string;
   count: number;
+};
+
+export type OssListFilesResult = {
+  ossPath: string;
+  bucket: string;
+  prefix: string;
+  totalFiles: number;
+  topFiles: string[];
+  generatedAt: string;
+};
+
+export type OssSampleResult = {
+  ossPath: string;
+  bucket: string;
+  prefix: string;
+  sampleSize: number;
+  totalFiles: number;
+  sampleLines: string[];
+  errors: string[];
+  generatedAt: string;
 };
 
 export type Dashboard = {

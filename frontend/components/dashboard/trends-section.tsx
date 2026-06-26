@@ -5,7 +5,7 @@ import { TrendChart } from "@/components/trend-chart";
 import { getDashboardTrends } from "@/lib/api";
 import type { TrendPoint } from "@/lib/types";
 
-export function TrendsSection() {
+export function TrendsSection({ projectId }: { projectId?: number }) {
   const [datasetTrends, setDatasetTrends] = useState<TrendPoint[]>([]);
   const [taskTrends, setTaskTrends] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +14,7 @@ export function TrendsSection() {
     let cancelled = false;
     async function fetch() {
       setLoading(true);
-      const result = await getDashboardTrends();
+      const result = await getDashboardTrends(projectId);
       if (cancelled) return;
       if (result.data) {
         setDatasetTrends(result.data.datasetTrends);
@@ -26,7 +26,7 @@ export function TrendsSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectId]);
 
   return (
     <section className="grid gap-4 md:grid-cols-2">

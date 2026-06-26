@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   ArrowDown,
@@ -10,7 +11,9 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Filter,
   Play,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +30,20 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "success", label: "成功" },
   { key: "running", label: "运行中" },
   { key: "failed", label: "失败" },
+];
+
+const TASK_TYPES = [
+  "质量过滤",
+  "模型过滤",
+  "模糊去重",
+  "精确去重",
+  "数据解析",
+  "数据抽取",
+  "清洗",
+  "合并",
+  "导出",
+  "同步",
+  "其他",
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -67,6 +84,10 @@ function compareByDumpBatch(a: Task, b: Task) {
 }
 
 export default function TaskListPage() {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project_id");
+  const projectIdNum = projectId ? Number(projectId) : undefined;
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("success");
@@ -75,15 +96,37 @@ export default function TaskListPage() {
   const [pageSize, setPageSize] = useState(20);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>("desc");
 
+  // Filter states
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [taskTypeFilter, setTaskTypeFilter] = useState("");
+
+  const hasActiveFilters = dateFrom || dateTo || taskTypeFilter;
+
+  function buildFetchParams() {
+    const startTime = dateFrom ? `${dateFrom}T00:00:00` : undefined;
+    const endTime = dateTo ? `${dateTo}T23:59:59` : undefined;
+    const type = taskTypeFilter || undefined;
+    return { startTime, endTime, taskType: type };
+  }
+
   useEffect(() => {
-    getTasks().then((result) => {
+    const { startTime, endTime, taskType } = buildFetchParams();
+    getTasks(projectIdNum, startTime, endTime, taskType).then((result) => {
       if (result.error) {
         setError(result.error);
       } else {
         setTasks(result.data ?? []);
       }
     });
-  }, []);
+  }, [projectIdNum, dateFrom, dateTo, taskTypeFilter]);
+
+  function clearFilters() {
+    setDateFrom("");
+    setDateTo("");
+    setTaskTypeFilter("");
+    setPage(1);
+  }
 
   // Filter → sort → paginate
   const filtered = useMemo(() => {
@@ -147,6 +190,74 @@ export default function TaskListPage() {
           />
         </div>
       </section>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50/50 p-3">
+        <Filter className="h-4 w-4 text-zinc-400 shrink-0" />
+
+        {/* Date range */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-500 shrink-0">结束时间</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(1);
+            }}
+            className="h-8 rounded-md border border-zinc-300 bg-white px-2.5 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+          />
+          <span className="text-xs text-zinc-400">—</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(1);
+            }}
+            className="h-8 rounded-md border border-zinc-300 bg-white px-2.5 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+          />
+        </div>
+
+        {/* Task type */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-500 shrink-0">类型</label>
+          <select
+            value={taskTypeFilter}
+            onChange={(e) => {
+              setTaskTypeFilter(e.target.value);
+              setPage(1);
+            }}
+            className="h-8 rounded-md border border-zinc-300 bg-white px-2.5 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+          >
+            <option value="">全部类型</option>
+            {TASK_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Clear filters */}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50 transition-colors"
+          >
+            <X className="h-3 w-3" />
+            清除筛选
+          </button>
+        )}
+
+        {/* Active filter count */}
+        {hasActiveFilters && (
+          <span className="ml-auto text-xs text-zinc-400 tabular-nums">
+            当前筛选结果：{tasks.length} 条
+          </span>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 w-fit">
