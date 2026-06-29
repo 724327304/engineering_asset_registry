@@ -105,8 +105,8 @@ class DatasetTaskCreate(BaseModel):
     output_dataset_id: int = Field(..., description="输出数据集 ID（该任务产出的数据）")
     task_name: str = Field(..., max_length=255, description="任务名称，最长 255 字符")
     task_type: str = Field(...,
-                           pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|数据抽取|清洗|合并|导出|同步|其他)$",
-                           description="任务类型：质量过滤/模型过滤/模糊去重/精确去重/数据解析/数据抽取/清洗/合并/导出/同步/其他")
+                           pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|预处理|数据抽取|清洗|合并|导出|同步|其他)$",
+                           description="任务类型：质量过滤/模型过滤/模糊去重/精确去重/数据解析/预处理/数据抽取/清洗/合并/导出/同步/其他")
     size_before: float = Field(0.0, description="处理前数据大小（数值），默认 0")
     size_unit: Optional[str] = Field("B", description="处理前数据大小单位，默认 B")
     size_after: float = Field(0.0, description="处理后数据大小（数值），默认 0")
@@ -131,7 +131,7 @@ class DatasetTaskUpdate(BaseModel):
     output_dataset_id: Optional[int] = Field(None, description="输出数据集 ID")
     task_name: Optional[str] = Field(None, max_length=255, description="任务名称")
     task_type: Optional[str] = Field(None,
-                                     pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|数据抽取|清洗|合并|导出|同步|其他)$",
+                                     pattern="^(质量过滤|模型过滤|模糊去重|精确去重|数据解析|预处理|数据抽取|清洗|合并|导出|同步|其他)$",
                                      description="任务类型")
     size_before: Optional[float] = Field(None, description="处理前数据大小")
     size_unit: Optional[str] = Field(None, description="处理前数据大小单位")

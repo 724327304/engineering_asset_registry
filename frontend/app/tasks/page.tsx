@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  Download,
   Search,
   ArrowDown,
   ArrowUp,
@@ -38,6 +39,7 @@ const TASK_TYPES = [
   "模糊去重",
   "精确去重",
   "数据解析",
+  "预处理",
   "数据抽取",
   "清洗",
   "合并",
@@ -83,7 +85,7 @@ function compareByDumpBatch(a: Task, b: Task) {
   return a.name.localeCompare(b.name, "zh-CN");
 }
 
-export default function TaskListPage() {
+function TaskListPageContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project_id");
   const projectIdNum = projectId ? Number(projectId) : undefined;
@@ -153,6 +155,36 @@ export default function TaskListPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
 
+  function handleExportCsv() {
+    if (filtered.length === 0) return;
+    const BOM = "\uFEFF";
+    const header = "ID,任务名称,类型,输入数据集,输出数据集,前数据量,后数据量,前记录数,后记录数,耗时,状态,执行人,开始时间,结束时间,创建时间\n";
+    const rows = filtered.map((t) => {
+      const esc = (v: string) =>
+        v.includes(",") || v.includes("\n") || v.includes('"')
+          ? `"${v.replace(/"/g, '""')}"`
+          : v;
+      return [
+        t.id, t.name, t.type,
+        t.inputDatasetName, t.outputDatasetName,
+        t.sizeBeforeDisplayLabel, t.sizeAfterDisplayLabel,
+        t.recordBeforeLabel, t.recordAfterLabel,
+        t.durationLabel, t.statusLabel, t.executor,
+        t.startTimeLabel, t.endTimeLabel, t.createdAtLabel,
+      ].map((v) => esc(String(v))).join(",");
+    }).join("\n");
+    const csv = BOM + header + rows;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tasks-${activeTab}-${filtered.length}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const paged = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
@@ -171,6 +203,15 @@ export default function TaskListPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            导出 CSV
+          </button>
           <div className="relative w-80">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
@@ -526,6 +567,14 @@ export default function TaskListPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function TaskListPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-zinc-500">正在加载...</div>}>
+      <TaskListPageContent />
+    </Suspense>
   );
 }
 

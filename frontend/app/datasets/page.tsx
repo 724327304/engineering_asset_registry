@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  Download,
   Search,
   Database,
   ArrowDown,
@@ -62,7 +63,7 @@ function compareByDumpBatch(a: Dataset, b: Dataset) {
   return a.name.localeCompare(b.name, "zh-CN");
 }
 
-export default function DatasetListPage() {
+function DatasetListPageContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project_id");
   const projectIdNum = projectId ? Number(projectId) : undefined;
@@ -108,6 +109,33 @@ export default function DatasetListPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
 
+  function handleExportCsv() {
+    if (filtered.length === 0) return;
+    const BOM = "\uFEFF";
+    const header = "ID,名称,描述,来源,类型,存储路径,数据大小,记录数,负责人,状态,创建时间,更新时间\n";
+    const rows = filtered.map((d) => {
+      const esc = (v: string) =>
+        v.includes(",") || v.includes("\n") || v.includes('"')
+          ? `"${v.replace(/"/g, '""')}"`
+          : v;
+      return [
+        d.id, d.name, d.description, d.sourceLabel, d.datasetTypeLabel,
+        d.locationPath, d.sizeLabel, d.recordCountLabel,
+        d.owner, d.statusLabel, d.createdAt, d.updatedAt,
+      ].map((v) => esc(String(v))).join(",");
+    }).join("\n");
+    const csv = BOM + header + rows;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `datasets-${activeTab}-${filtered.length}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const paged = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
@@ -126,6 +154,15 @@ export default function DatasetListPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            导出 CSV
+          </button>
           <div className="relative w-80">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <Input
@@ -395,6 +432,14 @@ export default function DatasetListPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function DatasetListPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-zinc-500">正在加载...</div>}>
+      <DatasetListPageContent />
+    </Suspense>
   );
 }
 

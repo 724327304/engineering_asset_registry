@@ -148,6 +148,7 @@ npm run dev
 模糊去重
 精确去重
 数据解析
+预处理
 数据抽取
 清洗
 合并
@@ -163,7 +164,7 @@ npm run dev
 - `/datasets/[id]`: 数据集详情，展示基础信息、血缘和相关任务。
 - `/tasks`: 任务列表，支持状态切换、搜索、分页和按 dump 批次排序。
 - `/tasks/[id]`: 任务详情，展示数据流向、执行信息、数据留存率和配置。
-- `/lineage`: 简单血缘视图。
+- `/lineage`: 数据血缘视图，按任务输入输出关系展示连续处理链路。
 - `/search`: 全局搜索。
 - `/owners`: 负责人视图。
 - `/storage`: 存储概览，按存储类型聚合并展示数据集分页列表。
@@ -231,5 +232,6 @@ PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d engineering_asset_registry 
 - 存储量展示会按 `data_size + size_unit` 换算后聚合。
 - 任务数据变化展示会按 `size_before + size_unit`、`size_after + size_after_unit` 换算后计算留存率。
 - 仪表盘存储量只统计 `active` 数据集。
+- 数据血缘页当前聚焦连续链路展示；后续规划补充链路总览、每步处理前后指标、总体留存率和异常链路筛选。
 - 已删除数据集可以保留历史大小和记录数，但存储地址可能为空。
 - CC dump 相关页面排序默认按 `CC-MAIN-YYYY-WW` 批次倒序。

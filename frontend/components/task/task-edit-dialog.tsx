@@ -209,6 +209,7 @@ export function TaskEditDialog({ task }: TaskEditDialogProps) {
                     <option value="模糊去重">模糊去重</option>
                     <option value="精确去重">精确去重</option>
                     <option value="数据解析">数据解析</option>
+                    <option value="预处理">预处理</option>
                     <option value="数据抽取">数据抽取</option>
                     <option value="清洗">清洗</option>
                     <option value="合并">合并</option>

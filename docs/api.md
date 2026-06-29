@@ -187,7 +187,7 @@
 | input_dataset_id | integer | Y | 输入数据集 ID（该任务待处理的数据） |
 | output_dataset_id | integer | Y | 输出数据集 ID（该任务产出的数据） |
 | task_name | string | Y | 任务名称，最长 255 字符 |
-| task_type | string | Y | 任务类型。可选值：`质量过滤`/`模型过滤`/`模糊去重`/`精确去重`/`数据解析`/`数据抽取`/`清洗`/`合并`/`导出`/`同步`/`其他` |
+| task_type | string | Y | 任务类型。可选值：`质量过滤`/`模型过滤`/`模糊去重`/`精确去重`/`数据解析`/`预处理`/`数据抽取`/`清洗`/`合并`/`导出`/`同步`/`其他` |
 | size_before | number | N | 处理前数据大小（数值），默认 0 |
 | size_unit | string | N | 处理前数据大小单位，默认 `B` |
 | size_after | number | N | 处理后数据大小（数值），默认 0 |

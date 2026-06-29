@@ -13,6 +13,7 @@ function getPageTitle(pathname: string) {
   if (pathname === "/datasets") return "数据集";
   if (pathname.startsWith("/datasets/")) return "数据集详情";
   if (pathname === "/tasks") return "任务";
+  if (pathname === "/lineage") return "数据血缘";
   if (pathname.startsWith("/tasks/")) return "任务详情";
   return "工程管理平台";
 }

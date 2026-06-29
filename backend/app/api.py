@@ -191,7 +191,7 @@ def list_tasks(
     project_id: Optional[int] = Query(None, description="按项目 ID 筛选任务"),
     start_time: Optional[datetime] = Query(None, description="任务结束时间下限（ISO 8601）"),
     end_time: Optional[datetime] = Query(None, description="任务结束时间上限（ISO 8601）"),
-    task_type: Optional[str] = Query(None, description="任务类型（可选值：质量过滤/模型过滤/模糊去重/精确去重/数据解析/数据抽取/清洗/合并/导出/同步/其他）"),
+    task_type: Optional[str] = Query(None, description="任务类型（可选值：质量过滤/模型过滤/模糊去重/精确去重/数据解析/预处理/数据抽取/清洗/合并/导出/同步/其他）"),
     db: Session = Depends(get_db),
 ):
     return crud.list_tasks(
