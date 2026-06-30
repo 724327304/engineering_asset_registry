@@ -134,8 +134,8 @@ def sample_files_via_clickhouse(
             generated_at=datetime.now().isoformat(),
         )
 
-    # Step 2: 随机选文件
-    max_files = min(total_files, max(sample_size, 100))
+    # Step 2: 随机选文件（上限 100 个文件，避免读取太多压缩文件超时）
+    max_files = min(total_files, 100)
     selected = random.sample(all_files, max_files) if max_files < total_files else all_files
 
     # ClickHouse 连接
@@ -149,27 +149,41 @@ def sample_files_via_clickhouse(
             generated_at=datetime.now().isoformat(),
         )
 
-    # Step 3: 构建 UNION ALL 单查询
-    sub_queries = []
-    for file_key in selected:
-        sub_queries.append(
-            f"SELECT * FROM s3('{endpoint}/{bucket}/{file_key}', "
-            f"'{OSS_ACCESS_KEY_ID}', "
-            f"'{OSS_ACCESS_KEY_SECRET}', "
-            f"'LineAsString')"
-        )
-
-    # 用 rand() 作为排序列，对所有选中文件的行进行全局随机排序
-    union_sql = (
-        "SELECT *, rand() as _r FROM (\n  "
-        + "\n  UNION ALL\n  ".join(sub_queries)
-        + f"\n) ORDER BY _r LIMIT {sample_size}"
-    )
+    # Step 3: 分批抽样，避免单次查询触发 ClickHouse max_result_rows=10000。
+    # 每批先在文件内随机取候选行，再由 ClickHouse 在候选池中随机裁到本批目标行数。
+    max_query_sample_rows = 5000
+    safe_candidate_rows = 8000
+    remaining = sample_size
+    batch_idx = 0
+    all_lines: list[str] = []
 
     try:
-        result = client.query(union_sql, settings={"max_execution_time": 600})
-        # 返回两列：行内容 和 _r，取第一列
-        sampled = [str(row[0]) for row in result.result_rows]
+        while remaining > 0:
+            target_rows = min(remaining, max_query_sample_rows)
+            candidate_budget = min(safe_candidate_rows, max(target_rows, target_rows * 2))
+            per_file = max(1, (candidate_budget + max_files - 1) // max_files)
+            sub_queries = []
+            for file_key in selected:
+                sub_queries.append(
+                    f"SELECT * FROM ("
+                    f"SELECT * FROM s3('{endpoint}/{bucket}/{file_key}', "
+                    f"'{OSS_ACCESS_KEY_ID}', "
+                    f"'{OSS_ACCESS_KEY_SECRET}', "
+                    f"'LineAsString') "
+                    f"ORDER BY rand() LIMIT {per_file}"
+                    f")"
+                )
+
+            union_sql = "\n  UNION ALL\n  ".join(sub_queries)
+            sample_sql = f"SELECT * FROM ({union_sql}) ORDER BY rand() LIMIT {target_rows}"
+            result = client.query(sample_sql, settings={"max_execution_time": 600})
+            batch_lines = [str(row[0]) for row in result.result_rows]
+            all_lines.extend(batch_lines)
+
+            if not batch_lines:
+                break
+            remaining = sample_size - len(all_lines)
+            batch_idx += 1
     except Exception as exc:
         return SampleResult(
             oss_path=oss_path, bucket=bucket, prefix=prefix,
@@ -177,6 +191,12 @@ def sample_files_via_clickhouse(
             errors=[f"ClickHouse query failed: {exc}"],
             generated_at=datetime.now().isoformat(),
         )
+
+    # 防御性处理：分批查询总量正常不超过 sample_size，这里兼容异常超额的情况。
+    if len(all_lines) <= sample_size:
+        sampled = all_lines
+    else:
+        sampled = random.sample(all_lines, sample_size)
 
     return SampleResult(
         oss_path=oss_path, bucket=bucket, prefix=prefix,
